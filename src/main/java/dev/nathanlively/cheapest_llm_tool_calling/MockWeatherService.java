@@ -31,7 +31,7 @@ public class MockWeatherService {
             temperature = 30;
         }
 
-        return new WeatherResponse(temperature, 15, 20, 2, 53, 45, unit);
+        return new WeatherResponse(temperature, 15, 8, 12, 53, 45, unit);
     }
 
     public int getTotalCallCount() {
