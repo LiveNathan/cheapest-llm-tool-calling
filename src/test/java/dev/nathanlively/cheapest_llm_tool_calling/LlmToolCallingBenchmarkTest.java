@@ -75,6 +75,7 @@ public class LlmToolCallingBenchmarkTest {
     void weatherServiceSmokeTest() {
         TestScenario scenario = new TestScenario.Builder()
                 .name("Weather Service Smoke Test")
+                .systemPrompt("You are a helpful assistant for the weather service.")
                 .prompts("What's the weather in Tokyo?")
                 .validation(() -> {
                     // Simple validation - did it call the weather service?
