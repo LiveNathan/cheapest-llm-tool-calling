@@ -85,11 +85,13 @@ public class GroqTest {
         String content = Objects.requireNonNull(chatClientResponseFlux.collectList()
                         .block())
                 .stream()
-                .map(ChatClientResponse::chatResponse).filter(Objects::nonNull)
+                .map(ChatClientResponse::chatResponse)
+                .filter(Objects::nonNull)
                 .map(ChatResponse::getResults)
                 .flatMap(List::stream)
                 .map(Generation::getOutput)
                 .map(AssistantMessage::getText)
+                .filter(Objects::nonNull)  // Add this line
                 .collect(Collectors.joining());
 
         assertThat(content).contains("30", "10", "15");

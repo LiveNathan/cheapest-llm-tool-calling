@@ -4,7 +4,6 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
 
-@Service
 public class MockWeatherService {
 
     @Tool(description = "Get weather information for a specific location")
