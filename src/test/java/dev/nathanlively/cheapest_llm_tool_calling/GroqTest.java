@@ -6,10 +6,14 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StopWatch;
 
 import java.util.*;
@@ -21,19 +25,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class GroqTest {
     private static final Logger logger = LoggerFactory.getLogger(GroqTest.class);
     private static final String GROQ_BASE_URL = "https://api.groq.com/openai";
-
     private static final String HEADER_MESSAGE =
             String.format("%-25s %10s %10s %10s %12s %10s %10s",
                     "Model", "Avg Time", "Success", "Accuracy", "Avg Cost", "Tokens", "Calls");
-
-    // Models to test
     private static final String[] TEST_MODELS = {
             "llama-3.1-8b-instant",
             "llama-3.3-70b-versatile"
     };
-
-    private static final int TEST_ITERATIONS = 2; // Run each test multiple times for reliability
-
+    private static final int TEST_ITERATIONS = 1;
     private MockMixingConsoleService mockConsoleService;
 
     @BeforeEach
@@ -55,7 +54,6 @@ public class GroqTest {
                         .model(model)
                         .build())
                 .build();
-
         ChatClient chatClient = ChatClient.builder(chatModel).build();
 
         String response = chatClient.prompt()
@@ -77,8 +75,7 @@ public class GroqTest {
 
         for (String model : TEST_MODELS) {
             if (!LlmPricing.PRICING.containsKey(model)) {
-                logger.warn("Skipping model {} - pricing not configured", model);
-                continue;
+                throw new RuntimeException();
             }
 
             TestResults modelResults = runTestIterations(model, prompt, this::validateSimpleChannelRenaming);
@@ -133,7 +130,6 @@ public class GroqTest {
     private static final int MAX_RETRIES = 3;
     private static final long RETRY_DELAY_MS = 5_000; // 5 seconds between retries
 
-    // Modify runTestIterations method
     private TestResults runTestIterations(String model, String prompt, ValidationCallback validation) {
         logger.info("Testing model: {}", model);
         TestResults results = new TestResults(model);
@@ -161,15 +157,11 @@ public class GroqTest {
             results.addRun(run);
 
             mockConsoleService.reset();
-
-            // Longer delay between iterations to avoid rate limits
-            if (i < TEST_ITERATIONS - 1) {
-                try {
-                    logger.info("  Waiting {} seconds before next iteration...", RATE_LIMIT_DELAY_MS / 1000);
-                    Thread.sleep(RATE_LIMIT_DELAY_MS);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+            try {
+                logger.info("  Waiting {} seconds before next iteration...", RATE_LIMIT_DELAY_MS / 1000);
+                Thread.sleep(RATE_LIMIT_DELAY_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         }
 
@@ -180,7 +172,6 @@ public class GroqTest {
         TestRun run = new TestRun();
 
         try {
-            // Create model-specific client
             var chatModel = OpenAiChatModel.builder()
                     .openAiApi(OpenAiApi.builder()
                             .baseUrl(GROQ_BASE_URL)
@@ -190,14 +181,12 @@ public class GroqTest {
                             .model(model)
                             .build())
                     .build();
-
-            var chatClient = ChatClient.builder(chatModel).build();
-
-            // Start timing
+            ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+            ChatClient chatClient = ChatClient.builder(chatModel)
+                    .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                    .build();
             StopWatch stopWatch = new StopWatch();
             stopWatch.start();
-
-            // Execute request
             var response = chatClient.prompt()
                     .user(prompt)
                     .tools(mockConsoleService)
