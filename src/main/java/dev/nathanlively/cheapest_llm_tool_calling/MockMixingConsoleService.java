@@ -16,6 +16,11 @@ public class MockMixingConsoleService {
     public Response getParameter(
             @ToolParam(description = "API path to get (e.g., ch.0.cfg.name)", required = true)
             String path) {
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         callCount.incrementAndGet();
         Object value = consoleState.get(path);
         return new Response(path, value, value != null ? "SUCCESS" : "NOT_FOUND");
@@ -25,6 +30,11 @@ public class MockMixingConsoleService {
     public Response setSingleParameter(
             @ToolParam(description = "API call with path and value", required = true)
             ApiCall apiCall) {
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         callCount.incrementAndGet();
         capturedApiCalls.add(apiCall);
         consoleState.put(apiCall.path(), apiCall.value());
@@ -38,6 +48,11 @@ public class MockMixingConsoleService {
 
         List<Response> responses = new ArrayList<>();
         for (ApiCall call : apiCalls) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             callCount.incrementAndGet();
             capturedApiCalls.add(call);
             consoleState.put(call.path(), call.value());

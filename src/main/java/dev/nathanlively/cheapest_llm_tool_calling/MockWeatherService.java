@@ -19,6 +19,12 @@ public class MockWeatherService {
             @ToolParam(description = "Temperature unit", required = true)
             Unit unit) {
 
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         callCount.incrementAndGet();
         locationCallCounts.merge(location, 1, Integer::sum);
 
