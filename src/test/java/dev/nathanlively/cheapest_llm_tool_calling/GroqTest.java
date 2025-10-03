@@ -6,6 +6,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
@@ -13,7 +14,6 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StopWatch;
 
 import java.util.*;
@@ -68,17 +68,16 @@ public class GroqTest {
 
     @Test
     void simpleChannelRenamingTest() {
-        logger.info("=== SIMPLE TEST: Channel Renaming ===");
-        String prompt = "Rename channels 1-4 to Kick, Snare, Hat, and Tom";
-
+        logger.info("=== SIMPLE TEST: Channel Renaming with Memory ===");
+        String prompt1 = "Rename channel 1 to Kick and channel 2 to Snare";
+        String prompt2 = "Now rename channel 3 to Hat and channel 4 to Tom";
         Map<String, TestResults> results = new HashMap<>();
-
         for (String model : TEST_MODELS) {
-            if (!LlmPricing.PRICING.containsKey(model)) {
-                throw new RuntimeException();
-            }
-
-            TestResults modelResults = runTestIterations(model, prompt, this::validateSimpleChannelRenaming);
+            TestResults modelResults = runTestIterations(
+                    model,
+                    List.of(prompt1, prompt2),
+                    this::validateSimpleChannelRenaming
+            );
             results.put(model, modelResults);
         }
 
@@ -86,29 +85,55 @@ public class GroqTest {
         determineWinner(results);
     }
 
+    // Line ~106 in complexBandSetupTest
     @Test
     void complexBandSetupTest() {
         logger.info("=== COMPLEX TEST: Full Band Setup ===");
-        String prompt = """
-                Set up a 5-piece band with the following configuration:
-                - Drums: Kick (ch 1), Snare (ch 2), Hi-hat (ch 3), Tom 1 (ch 4), Tom 2 (ch 5),
-                  Overheads L/R (ch 6-7). Apply compression to kick and snare. High-pass all at 80Hz.
-                - Bass (ch 8): DI input, compression, high-pass at 40Hz
-                - Electric Guitar (ch 9): Amp mic, high-pass at 80Hz
-                - Keys stereo (ch 10-11): DI, high-pass at 40Hz
-                - Lead Vocal (ch 12): Compression, high-pass at 100Hz
-                - Backing Vocal (ch 13): High-pass at 100Hz
-                
-                Routing:
+
+        List<String> prompts = List.of(
+                // Turn 1: Drums setup
+                """
+                        Set up drums on channels 1-7:
+                        - Kick (ch 1), Snare (ch 2), Hi-hat (ch 3), Tom 1 (ch 4), Tom 2 (ch 5), Overheads L/R (ch 6-7)
+                        - Apply compression to kick and snare
+                        - High-pass all drum channels at 80Hz
+                        """,
+
+                // Turn 2: Rhythm section and instruments
+                """
+                        Now add the rhythm section and other instruments:
+                        - Bass on ch 8: DI input, compression, high-pass at 40Hz
+                        - Electric Guitar on ch 9: Amp mic, high-pass at 80Hz
+                        - Keys stereo on ch 10-11: DI, high-pass at 40Hz
+                        """,
+
+                // Turn 3: Vocals
+                """
+                        Add vocals:
+                        - Lead Vocal on ch 12: Compression, high-pass at 100Hz
+                        - Backing Vocal on ch 13: High-pass at 100Hz
+                        """,
+
+                // Turn 4: Routing and buses
+                """
+                        Set up routing for the band we just configured:
                 - Create drum bus (bus 1) with all drums
                 - Send vocals to reverb (fx bus 1)
                 - Bass and lead vocal to wedge monitors (bus 2-3)
                 - Guitar and keys to IEMs (bus 4-5)
                 - All channels to main mix
-                
-                Use color coding: drums=red(1), bass=green(2), guitar=blue(3),
-                keys=purple(4), vocals=yellow(5)
-                """;
+                        """,
+
+                // Turn 5: Color coding
+                """
+                        Apply color coding to everything:
+                        - Drums: red (1)
+                        - Bass: green (2)
+                        - Guitar: blue (3)
+                        - Keys: purple (4)
+                        - Vocals: yellow (5)
+                        """
+        );
 
         Map<String, TestResults> results = new HashMap<>();
 
@@ -118,7 +143,7 @@ public class GroqTest {
                 continue;
             }
 
-            TestResults modelResults = runTestIterations(model, prompt, this::validateComplexBandSetup);
+            TestResults modelResults = runTestIterations(model, prompts, this::validateComplexBandSetup);
             results.put(model, modelResults);
         }
 
@@ -130,7 +155,7 @@ public class GroqTest {
     private static final int MAX_RETRIES = 3;
     private static final long RETRY_DELAY_MS = 5_000; // 5 seconds between retries
 
-    private TestResults runTestIterations(String model, String prompt, ValidationCallback validation) {
+    private TestResults runTestIterations(String model, List<String> prompts, ValidationCallback validation) {
         logger.info("Testing model: {}", model);
         TestResults results = new TestResults(model);
 
@@ -141,8 +166,8 @@ public class GroqTest {
             TestRun run = null;
             for (int retry = 0; retry < MAX_RETRIES; retry++) {
                 try {
-                    run = executeSingleTest(model, prompt, validation);
-                    if (run.success || !run.error.contains("rate_limit_exceeded")) {
+                    run = executeSingleTest(model, prompts, validation);
+                    if (run.success || run.error == null || !run.error.contains("rate_limit_exceeded")) {
                         break; // Success or non-rate-limit error
                     }
                     logger.warn("Rate limit hit, waiting {} seconds before retry {}/{}",
@@ -168,7 +193,7 @@ public class GroqTest {
         return results;
     }
 
-    private TestRun executeSingleTest(String model, String prompt, ValidationCallback validation) {
+    private TestRun executeSingleTest(String model, List<String> prompts, ValidationCallback validation) {
         TestRun run = new TestRun();
 
         try {
@@ -187,17 +212,19 @@ public class GroqTest {
                     .build();
             StopWatch stopWatch = new StopWatch();
             stopWatch.start();
-            var response = chatClient.prompt()
-                    .user(prompt)
-                    .tools(mockConsoleService)
-                    .call()
-                    .chatClientResponse();
+            ChatClientResponse lastResponse = null;
+            for (String prompt : prompts) {
+                lastResponse = chatClient.prompt()
+                        .user(prompt)
+                        .tools(mockConsoleService)
+                        .call()
+                        .chatClientResponse();
+            }
 
             stopWatch.stop();
             run.executionTimeMs = stopWatch.getTotalTimeMillis();
+            ChatResponse chatResponse = Objects.requireNonNull(lastResponse).chatResponse();
 
-            // Validate response
-            ChatResponse chatResponse = response.chatResponse();
             if (chatResponse != null && chatResponse.getMetadata().getUsage() != null) {
                 var usage = chatResponse.getMetadata().getUsage();
                 run.promptTokens = usage.getPromptTokens() != null ? usage.getPromptTokens() : 0;
