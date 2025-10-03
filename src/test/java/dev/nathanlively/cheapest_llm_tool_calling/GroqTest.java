@@ -34,6 +34,17 @@ public class GroqTest {
     };
     private static final int TEST_ITERATIONS = 1;
     private MockMixingConsoleService mockConsoleService;
+    private static final String SYSTEM_PROMPT = """
+            You are controlling a mixing console API that uses 0-based indexing.
+            When users refer to "channel 1", you must use index 0 in the API (ch.0).
+            When users refer to "channel 2", you must use index 1 in the API (ch.1).
+            Always subtract 1 from the user's channel numbers to get the correct API index.
+            
+            Examples:
+            - User says "channel 1" → use ch.0 in API
+            - User says "channels 1-7" → use ch.0 through ch.6 in API
+            - User says "channel 12" → use ch.11 in API
+            """;
 
     @BeforeEach
     void setUp() {
@@ -215,6 +226,7 @@ public class GroqTest {
             ChatClientResponse lastResponse = null;
             for (String prompt : prompts) {
                 lastResponse = chatClient.prompt()
+                        .system(SYSTEM_PROMPT)
                         .user(prompt)
                         .tools(mockConsoleService)
                         .call()
@@ -484,5 +496,112 @@ public class GroqTest {
         double cost;
         int toolCallsMade;
         double accuracyScore;
+    }
+
+    @Test
+    void memoryWithoutMultiTurnTest() {
+        logger.info("=== TEST: Memory with Single Turn ===");
+        String prompt = "Rename channel 1 to Kick, channel 2 to Snare, channel 3 to Hat, and channel 4 to Tom";
+
+        var chatModel = createChatModel("llama-3.1-8b-instant");
+        ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .build();
+
+        chatClient.prompt()
+                .user(prompt)
+                .tools(mockConsoleService)
+                .call()
+                .chatClientResponse();
+
+        var calls = mockConsoleService.getCapturedApiCalls();
+        logger.info("Tool calls made: {}", calls.size());
+        logger.info("Captured calls: {}", calls);
+
+        assertThat(mockConsoleService.getTotalCallCount()).isGreaterThan(0);
+    }
+
+    @Test
+    void multiTurnWithoutMemoryTest() {
+        logger.info("=== TEST: Multi-turn without Memory ===");
+
+        var chatModel = createChatModel("llama-3.1-8b-instant");
+        ChatClient chatClient = ChatClient.builder(chatModel).build(); // NO MEMORY
+
+        // FIRST TURN
+        chatClient.prompt()
+                .system(SYSTEM_PROMPT)
+                .user("Rename channel 1 to Kick and channel 2 to Snare")
+                .tools(mockConsoleService)
+                .call()
+                .chatClientResponse();
+
+        var firstTurnCalls = mockConsoleService.getCapturedApiCalls();
+        logger.info("First turn tool calls: {}", firstTurnCalls.size());
+        logger.info("First turn captured calls: {}", firstTurnCalls);
+
+        mockConsoleService.reset();
+
+        // SECOND TURN
+        chatClient.prompt()
+                .system(SYSTEM_PROMPT)
+                .user("Now rename channel 3 to Hat and channel 4 to Tom")
+                .tools(mockConsoleService)
+                .call()
+                .chatClientResponse();
+
+        var secondTurnCalls = mockConsoleService.getCapturedApiCalls();
+        logger.info("Second turn tool calls: {}", secondTurnCalls.size());
+        logger.info("Second turn captured calls: {}", secondTurnCalls);
+    }
+
+    private OpenAiChatModel createChatModel(String model) {
+        return OpenAiChatModel.builder()
+                .openAiApi(OpenAiApi.builder()
+                        .baseUrl(GROQ_BASE_URL)
+                        .apiKey(System.getenv("GROQ_API_KEY"))
+                        .build())
+                .defaultOptions(OpenAiChatOptions.builder()
+                        .model(model)
+                        .build())
+                .build();
+    }
+
+    @Test
+    void memoryWithMultiTurnTest() {
+        logger.info("=== TEST: Memory with Multi-turn ===");
+
+        var chatModel = createChatModel("llama-3.1-8b-instant");
+        ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .build();
+
+        // FIRST TURN
+        chatClient.prompt()
+                .system(SYSTEM_PROMPT)
+                .user("Rename channel 1 to Kick and channel 2 to Snare")
+                .tools(mockConsoleService)
+                .call()
+                .chatClientResponse();
+
+        var firstTurnCalls = mockConsoleService.getCapturedApiCalls();
+        logger.info("First turn tool calls: {}", firstTurnCalls.size());
+        logger.info("First turn captured calls: {}", firstTurnCalls);
+
+        mockConsoleService.reset();
+
+        // SECOND TURN
+        chatClient.prompt()
+                .system(SYSTEM_PROMPT)
+                .user("Now rename channel 3 to Hat and channel 4 to Tom")
+                .tools(mockConsoleService)
+                .call()
+                .chatClientResponse();
+
+        var secondTurnCalls = mockConsoleService.getCapturedApiCalls();
+        logger.info("Second turn tool calls: {}", secondTurnCalls.size());
+        logger.info("Second turn captured calls: {}", secondTurnCalls);
     }
 }
