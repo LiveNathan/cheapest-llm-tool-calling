@@ -117,13 +117,14 @@ public class BenchmarkRunner {
             stopWatch.start();
 
             ChatClientResponse lastResponse = null;
+            boolean firstPrompt = true;
             for (String prompt : scenario.getPrompts()) {
-                var promptCall = chatClient.prompt()
-                        .system(scenario.getSystemPrompt())
-                        .user(prompt)
-                        .tools(scenario.getToolService());
-
-                lastResponse = promptCall.call().chatClientResponse();
+                ChatClient.ChatClientRequestSpec promptBuilder = chatClient.prompt().user(prompt).tools(scenario.getToolService());
+                if (firstPrompt) {
+                    promptBuilder.system(scenario.getSystemPrompt());
+                    firstPrompt = false;
+                }
+                lastResponse = promptBuilder.call().chatClientResponse();
             }
 
             stopWatch.stop();

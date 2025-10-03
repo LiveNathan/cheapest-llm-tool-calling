@@ -36,7 +36,6 @@ public class LlmToolCallingBenchmarkTest {
     private MockMixingConsoleService mockConsoleService;
     private MockWeatherService mockWeatherService;
     private BenchmarkRunner benchmarkRunner;
-    private List<LlmProvider> providers;
 
     static Stream<String> apiKeyProvider() {
         return Stream.of(
@@ -51,7 +50,7 @@ public class LlmToolCallingBenchmarkTest {
         mockWeatherService = new MockWeatherService();
 
         // Configure providers to test
-        providers = List.of(
+        List<LlmProvider> providers = List.of(
                 new GroqProvider(),
                 new MistralProvider()
         );
@@ -97,10 +96,8 @@ public class LlmToolCallingBenchmarkTest {
     void simpleChannelRenamingBenchmark() {
         TestScenario scenario = new TestScenario.Builder()
                 .name("Simple Channel Renaming with Memory")
-                .prompts(
-                        "Rename channel 1 to Kick and channel 2 to Snare",
-                        "Now rename channel 3 to Hat and channel 4 to Tom"
-                )
+                .prompts("Rename channel 1 to Kick and channel 2 to Snare",
+                        "Now rename channel 3 to Hat and channel 4 to Tom")
                 .validation(this::validateSimpleChannelRenaming)
                 .toolService(mockConsoleService)
                 .systemPrompt(MIXING_CONSOLE_SYSTEM_PROMPT)
