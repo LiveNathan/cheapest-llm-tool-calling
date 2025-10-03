@@ -96,7 +96,6 @@ public class GroqTest {
         determineWinner(results);
     }
 
-    // Line ~106 in complexBandSetupTest
     @Test
     void complexBandSetupTest() {
         logger.info("=== COMPLEX TEST: Full Band Setup ===");
@@ -132,8 +131,7 @@ public class GroqTest {
                 - Send vocals to reverb (fx bus 1)
                 - Bass and lead vocal to wedge monitors (bus 2-3)
                 - Guitar and keys to IEMs (bus 4-5)
-                - All channels to main mix
-                        """,
+                        - All channels to main mix""",
 
                 // Turn 5: Color coding
                 """
@@ -164,7 +162,6 @@ public class GroqTest {
 
     private static final long RATE_LIMIT_DELAY_MS = 10_000; // 10 seconds between tests
     private static final int MAX_RETRIES = 3;
-    private static final long RETRY_DELAY_MS = 5_000; // 5 seconds between retries
 
     private TestResults runTestIterations(String model, List<String> prompts, ValidationCallback validation) {
         logger.info("Testing model: {}", model);
@@ -173,17 +170,20 @@ public class GroqTest {
         for (int i = 0; i < TEST_ITERATIONS; i++) {
             logger.info("  Iteration {}/{}", i + 1, TEST_ITERATIONS);
 
-            // Add retry logic for rate limiting
             TestRun run = null;
+            int backoffMs = 1000;
             for (int retry = 0; retry < MAX_RETRIES; retry++) {
                 try {
                     run = executeSingleTest(model, prompts, validation);
-                    if (run.success || run.error == null || !run.error.contains("rate_limit_exceeded")) {
-                        break; // Success or non-rate-limit error
+                    if (run.success || !isRateLimitError(run.error)) {
+                        break;
                     }
+
                     logger.warn("Rate limit hit, waiting {} seconds before retry {}/{}",
-                            RETRY_DELAY_MS / 1000, retry + 1, MAX_RETRIES);
-                    Thread.sleep(RETRY_DELAY_MS);
+                            backoffMs / 1000.0, retry + 1, MAX_RETRIES);
+                    Thread.sleep(backoffMs);
+                    backoffMs *= 2;
+
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -258,12 +258,20 @@ public class GroqTest {
             run.error = e.getMessage();
 
             // Check if it's a rate limit error
-            if (e.getMessage() != null && e.getMessage().contains("rate_limit_exceeded")) {
+            if (isRateLimitError(e.getMessage())) {
                 logger.warn("Rate limit exceeded for model: {}", model);
             }
         }
 
         return run;
+    }
+
+    private boolean isRateLimitError(String error) {
+        return error != null && (
+                error.contains("rate_limit_exceeded") ||
+                error.contains("429") ||
+                error.contains("Too Many Requests")
+        );
     }
 
     private double validateSimpleChannelRenaming() {
@@ -351,7 +359,7 @@ public class GroqTest {
     private void determineWinner(Map<String, TestResults> results) {
         logger.info("\n=== WINNER DETERMINATION ===");
 
-        // Filter out models with 0% success rate - they cannot win
+        // Filter out models with a 0% success rate - they cannot win
         Map<String, TestResults> viableModels = results.entrySet().stream()
                 .filter(entry -> entry.getValue().getSuccessRate() > 0)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -395,7 +403,7 @@ public class GroqTest {
             double totalScore = reliabilityScore + accuracyScore + speedScore + costScore;
             scores.put(model, totalScore);
 
-            // Create breakdown for debugging
+            // Create a breakdown for debugging
             scoreBreakdowns.put(model, String.format(
                     "reliability=%.1f, accuracy=%.1f, speed=%.1f, cost=%.1f",
                     reliabilityScore, accuracyScore, speedScore, costScore));
