@@ -98,9 +98,16 @@ public class GroqTest {
         // 2. ACCURACY METRICS
         assertThat(content).contains("30", "10", "15");
         assertThat(mockWeatherService.getTotalCallCount()).isEqualTo(3);
-        assertThat(mockWeatherService.getCallCountForLocation("San Francisco")).isGreaterThan(0);
-        assertThat(mockWeatherService.getCallCountForLocation("Tokyo")).isGreaterThan(0);
-        assertThat(mockWeatherService.getCallCountForLocation("Paris")).isGreaterThan(0);
+        // After line 85: List<ChatClientResponse> responses = ...
+        logger.info("Total tool calls: {}", mockWeatherService.getTotalCallCount());
+        logger.info("Location call counts: {}", mockWeatherService.getLocationCallCounts());
+        var locationCounts = mockWeatherService.getLocationCallCounts();
+        assertThat(locationCounts.keySet())
+                .as("Should have called tool for all three cities")
+                .hasSize(3);
+        assertThat(locationCounts.values())
+                .as("Each location should be called at least once")
+                .allMatch(count -> count > 0);
 
         // 3. COST METRICS
         var usage = finalResponse.getMetadata().getUsage();
@@ -159,6 +166,8 @@ public class GroqTest {
 
                 stopWatch.stop();
 
+                boolean hallucinated = mockWeatherService.getTotalCallCount() == 0;
+
                 var usage = Objects.requireNonNull(response.chatResponse()).getMetadata().getUsage();
                 var pricing = LlmPricing.PRICING.get(model);
                 double cost = pricing.calculateCost(
@@ -166,14 +175,16 @@ public class GroqTest {
                         usage.getCompletionTokens() != null ? usage.getCompletionTokens() : 0
                 );
 
-                logger.info("Model: {} - Time: {}ms, Cost: ${}, Tokens: {}",
+                logger.info("Model: {} - Time: {}ms, Cost: ${}, Tokens: {}, Hallucinated: {}",
                         model,
                         stopWatch.lastTaskInfo().getTimeMillis(),
                         String.format("%.6f", cost),
-                        usage.getTotalTokens());
+                        usage.getTotalTokens(),
+                        hallucinated);
 
             } catch (Exception e) {
                 logger.error("Error testing model {}: {}", model, e.getMessage());
+                logger.info("Model: {} - FAILED (tool hallucination or error)", model);
             }
         }
     }

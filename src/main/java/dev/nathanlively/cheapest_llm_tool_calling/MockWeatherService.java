@@ -3,6 +3,8 @@ package dev.nathanlively.cheapest_llm_tool_calling;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,6 +45,10 @@ public class MockWeatherService {
     public void reset() {
         callCount.set(0);
         locationCallCounts.clear();
+    }
+
+    public Map<String, Integer> getLocationCallCounts() {
+        return new HashMap<>(locationCallCounts);
     }
 
     // Keep existing enums and records unchanged
