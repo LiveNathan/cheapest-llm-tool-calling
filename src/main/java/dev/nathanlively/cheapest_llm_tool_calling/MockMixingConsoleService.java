@@ -14,7 +14,7 @@ public class MockMixingConsoleService {
 
     @Tool(description = "Get current value of a mixer parameter")
     public Response getParameter(
-            @ToolParam(description = "API path to get (e.g., ch.0.cfg.name)", required = true)
+            @ToolParam(description = "API path to get (e.g., ch.0.cfg.name)")
             String path) {
         try {
             Thread.sleep(500);
@@ -23,12 +23,12 @@ public class MockMixingConsoleService {
         }
         callCount.incrementAndGet();
         Object value = consoleState.get(path);
-        return new Response(path, value, value != null ? "SUCCESS" : "NOT_FOUND");
+        return new Response(path, value, "SUCCESS");
     }
 
     @Tool(description = "Make a single API call to the Mixing Station console. Use 0-based channel indexing.")
     public Response setSingleParameter(
-            @ToolParam(description = "API call with path and value", required = true)
+            @ToolParam(description = "API call with path and value")
             ApiCall apiCall) {
         try {
             Thread.sleep(500);
@@ -43,7 +43,7 @@ public class MockMixingConsoleService {
 
     @Tool(description = "Make multiple API calls in sequence for complex mixer setup. Use 0-based channel indexing for all paths.")
     public List<Response> setMultipleParameters(
-            @ToolParam(description = "List of API calls to execute in order", required = true)
+            @ToolParam(description = "List of API calls to execute in order")
             List<ApiCall> apiCalls) {
 
         List<Response> responses = new ArrayList<>();
@@ -70,24 +70,10 @@ public class MockMixingConsoleService {
         return new ArrayList<>(capturedApiCalls);
     }
 
-    public Map<String, Object> getConsoleState() {
-        return new HashMap<>(consoleState);
-    }
-
     public void reset() {
         callCount.set(0);
         capturedApiCalls.clear();
         consoleState.clear();
-    }
-
-    public boolean hasCall(String path, Object value) {
-        return capturedApiCalls.contains(new ApiCall(path, value));
-    }
-
-    public long countCallsMatching(String pathPattern) {
-        return capturedApiCalls.stream()
-                .filter(call -> call.path().matches(pathPattern))
-                .count();
     }
 
     // Response record for tool results
@@ -95,10 +81,3 @@ public class MockMixingConsoleService {
     }
 }
 
-// API Call record - matches your production structure
-record ApiCall(String path, Object value) {
-    @Override
-    public String toString() {
-        return String.format("ApiCall{path='%s', value=%s}", path, value);
-    }
-}

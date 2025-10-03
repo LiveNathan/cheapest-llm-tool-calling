@@ -32,7 +32,7 @@ public class GroqTest {
             "llama-3.3-70b-versatile"
     };
 
-    private static final int TEST_ITERATIONS = 3; // Run each test multiple times for reliability
+    private static final int TEST_ITERATIONS = 2; // Run each test multiple times for reliability
 
     private MockMixingConsoleService mockConsoleService;
 
@@ -129,23 +129,47 @@ public class GroqTest {
         determineWinner(results);
     }
 
+    private static final long RATE_LIMIT_DELAY_MS = 10_000; // 10 seconds between tests
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 5_000; // 5 seconds between retries
+
+    // Modify runTestIterations method
     private TestResults runTestIterations(String model, String prompt, ValidationCallback validation) {
         logger.info("Testing model: {}", model);
         TestResults results = new TestResults(model);
 
         for (int i = 0; i < TEST_ITERATIONS; i++) {
             logger.info("  Iteration {}/{}", i + 1, TEST_ITERATIONS);
-            TestRun run = executeSingleTest(model, prompt, validation);
+
+            // Add retry logic for rate limiting
+            TestRun run = null;
+            for (int retry = 0; retry < MAX_RETRIES; retry++) {
+                try {
+                    run = executeSingleTest(model, prompt, validation);
+                    if (run.success || !run.error.contains("rate_limit_exceeded")) {
+                        break; // Success or non-rate-limit error
+                    }
+                    logger.warn("Rate limit hit, waiting {} seconds before retry {}/{}",
+                            RETRY_DELAY_MS / 1000, retry + 1, MAX_RETRIES);
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+
             results.addRun(run);
 
-            // Reset service between runs
             mockConsoleService.reset();
 
-            // Add a delay to avoid rate limiting
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            // Longer delay between iterations to avoid rate limits
+            if (i < TEST_ITERATIONS - 1) {
+                try {
+                    logger.info("  Waiting {} seconds before next iteration...", RATE_LIMIT_DELAY_MS / 1000);
+                    Thread.sleep(RATE_LIMIT_DELAY_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
 
@@ -204,6 +228,11 @@ public class GroqTest {
             logger.error("Error in test run: {}", e.getMessage());
             run.success = false;
             run.error = e.getMessage();
+
+            // Check if it's a rate limit error
+            if (e.getMessage() != null && e.getMessage().contains("rate_limit_exceeded")) {
+                logger.warn("Rate limit exceeded for model: {}", model);
+            }
         }
 
         return run;

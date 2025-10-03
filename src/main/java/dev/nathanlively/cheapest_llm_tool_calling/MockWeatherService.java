@@ -3,20 +3,16 @@ package dev.nathanlively.cheapest_llm_tool_calling;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MockWeatherService {
     private final AtomicInteger callCount = new AtomicInteger(0);
-    private final ConcurrentHashMap<String, Integer> locationCallCounts = new ConcurrentHashMap<>();
 
     @Tool(description = "Get weather information for a specific location")
     public WeatherResponse getWeather(
-            @ToolParam(description = "The city and state e.g. San Francisco, CA", required = true)
+            @ToolParam(description = "The city and state e.g. San Francisco, CA")
             String location,
-            @ToolParam(description = "Temperature unit", required = true)
+            @ToolParam(description = "Temperature unit")
             Unit unit) {
 
         try {
@@ -26,7 +22,6 @@ public class MockWeatherService {
         }
 
         callCount.incrementAndGet();
-        locationCallCounts.merge(location, 1, Integer::sum);
 
         double temperature = 0;
         if (location.contains("Paris")) {
@@ -44,20 +39,6 @@ public class MockWeatherService {
         return callCount.get();
     }
 
-    public int getCallCountForLocation(String location) {
-        return locationCallCounts.getOrDefault(location, 0);
-    }
-
-    public void reset() {
-        callCount.set(0);
-        locationCallCounts.clear();
-    }
-
-    public Map<String, Integer> getLocationCallCounts() {
-        return new HashMap<>(locationCallCounts);
-    }
-
-    // Keep existing enums and records unchanged
     public enum Unit {
         C("metric"),
         F("imperial");
