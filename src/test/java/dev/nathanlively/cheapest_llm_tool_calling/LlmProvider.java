@@ -57,7 +57,7 @@ public abstract class LlmProvider {
                         .build())
                 .build();
 
-        ChatClient.Builder builder = ChatClient.builder(chatModel).defaultSystem(scenario.getSystemPrompt());
+        ChatClient.Builder builder = ChatClient.builder(chatModel);
 
         if (withMemory) {
             MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder().build();

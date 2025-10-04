@@ -8,6 +8,9 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.util.StopWatch;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class BenchmarkRunner {
@@ -116,14 +119,21 @@ public class BenchmarkRunner {
             StopWatch stopWatch = new StopWatch();
             stopWatch.start();
 
-            ChatClientResponse lastResponse = null;
-            for (String prompt : scenario.getPrompts()) {
-                lastResponse = chatClient.prompt()
-                        .user(prompt)
-                        .tools(scenario.getToolService())
-                        .call()
-                        .chatClientResponse();
-            }
+            var future = CompletableFuture.supplyAsync(() -> {
+                ChatClientResponse lastResponse = null;
+                for (String prompt : scenario.getPrompts()) {
+                    lastResponse = chatClient.prompt()
+                            .system(scenario.getSystemPrompt())
+                            .user(prompt)
+                            .tools(scenario.getToolService())
+                            .call()
+                            .chatClientResponse();
+                }
+                return lastResponse;
+            });
+
+            ChatClientResponse lastResponse = future.get(2, TimeUnit.MINUTES);
+
             stopWatch.stop();
             run.executionTimeMs = stopWatch.getTotalTimeMillis();
 
@@ -142,6 +152,10 @@ public class BenchmarkRunner {
             run.success = run.accuracyScore > 0;
             run.toolCallsMade = getToolCallCount(scenario.getToolService());
 
+        } catch (TimeoutException e) {
+            logger.error("Error in test run: Timeout after 3 minutes");
+            run.success = false;
+            run.error = "Timeout after 3 minutes";
         } catch (Exception e) {
             logger.error("Error in test run: {}", e.getMessage());
             run.success = false;
