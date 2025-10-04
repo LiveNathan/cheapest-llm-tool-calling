@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class LlmToolCallingBenchmarkTest {
     private static final Logger logger = LoggerFactory.getLogger(LlmToolCallingBenchmarkTest.class);
     private static final int TEST_ITERATIONS = 1;
+    private static final int TIMEOUT_SECONDS = 60;
 
     private static final String MIXING_CONSOLE_SYSTEM_PROMPT = """
             You are controlling a mixing console API that uses 0-based indexing.
@@ -61,7 +62,7 @@ public class LlmToolCallingBenchmarkTest {
                 new DeepseekNativeProvider()
         );
 
-        benchmarkRunner = new BenchmarkRunner(providers, TEST_ITERATIONS);
+        benchmarkRunner = new BenchmarkRunner(providers, TEST_ITERATIONS, TIMEOUT_SECONDS);
     }
 
     @ParameterizedTest
@@ -103,7 +104,7 @@ public class LlmToolCallingBenchmarkTest {
         TestScenario scenario = new TestScenario.Builder()
                 .name("Simple Channel Renaming with Memory")
                 .prompts("Rename channel 1 to Kick and channel 2 to Snare",
-                        "Now rename channel 3 to Hat and channel 4 to Tom")
+                        "Now change Kick to Kick-In and Snare to Snare-Top")
                 .validation(this::validateSimpleChannelRenaming)
                 .toolService(mockConsoleService)
                 .systemPrompt(MIXING_CONSOLE_SYSTEM_PROMPT)
@@ -210,14 +211,15 @@ public class LlmToolCallingBenchmarkTest {
 
     // Helper methods
     private double validateSimpleChannelRenaming() {
-        var calls = mockConsoleService.getCapturedApiCalls();
+        List<ApiCall> calls = mockConsoleService.getCapturedApiCalls();
+        logger.info("Calls: {}", calls);
         double score = 0.0;
         double maxScore = 4.0;
 
         if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick"))) score += 1;
+        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick-In"))) score += 1;
         if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare"))) score += 1;
-        if (calls.contains(new ApiCall("ch.2.cfg.name", "Hat"))) score += 1;
-        if (calls.contains(new ApiCall("ch.3.cfg.name", "Tom"))) score += 1;
+        if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare-Top"))) score += 1;
 
         return score / maxScore;
     }

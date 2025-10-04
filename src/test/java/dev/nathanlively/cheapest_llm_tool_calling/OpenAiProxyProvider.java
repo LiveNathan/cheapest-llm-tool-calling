@@ -1,5 +1,7 @@
 package dev.nathanlively.cheapest_llm_tool_calling;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
@@ -12,12 +14,14 @@ import java.util.List;
 
 public abstract class OpenAiProxyProvider extends LlmProvider {
     protected final String baseUrl;
+    private static final Logger log = LoggerFactory.getLogger(OpenAiProxyProvider.class);
 
     protected OpenAiProxyProvider(String name, String baseUrl, String apiKeyEnvVar, List<String> supportedModels) {
         super(name, apiKeyEnvVar, supportedModels);
         this.baseUrl = baseUrl;
     }
 
+    // In OpenAiProxyProvider.createChatClient
     @Override
     public ChatClient createChatClient(String model, boolean withMemory, TestScenario scenario) {
         String apiKey = System.getenv(apiKeyEnvVar);
@@ -39,8 +43,16 @@ public abstract class OpenAiProxyProvider extends LlmProvider {
         ChatClient.Builder builder = ChatClient.builder(chatModel);
 
         if (withMemory) {
-            MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder().build();
-            builder.defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build(), new SimpleLoggerAdvisor());
+            log.info("Creating chat client with memory for {}/{}", name, model);
+            MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder()
+                    .maxMessages(10)
+                    .build();
+            builder.defaultAdvisors(
+                    MessageChatMemoryAdvisor.builder(chatMemory)
+                            .conversationId("test-" + System.currentTimeMillis()) // Unique ID
+                            .build(),
+                    new SimpleLoggerAdvisor()
+            );
         }
 
         return builder.build();

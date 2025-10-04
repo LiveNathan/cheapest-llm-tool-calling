@@ -8,7 +8,9 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.util.StopWatch;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -24,9 +26,12 @@ public class BenchmarkRunner {
     private final List<LlmProvider> providers;
     private final int iterations;
 
-    public BenchmarkRunner(List<LlmProvider> providers, int iterations) {
+    private final int timeoutSeconds;
+
+    public BenchmarkRunner(List<LlmProvider> providers, int iterations, int timeoutSeconds) {
         this.providers = providers;
         this.iterations = iterations;
+        this.timeoutSeconds = timeoutSeconds;
     }
 
     public BenchmarkResults runBenchmark(TestScenario scenario) {
@@ -110,58 +115,88 @@ public class BenchmarkRunner {
     }
 
     private TestRun executeSingleTest(LlmProvider provider, String model, TestScenario scenario) {
-        TestRun run = new TestRun();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<TestRun> future = executor.submit(() -> {
+            TestRun run = new TestRun();
 
-        try {
-            ChatClient chatClient = provider.createChatClient(model, true, scenario);
+            try {
+                ChatClient chatClient = provider.createChatClient(model, true, scenario);
 
-            StopWatch stopWatch = new StopWatch();
-            stopWatch.start();
+                StopWatch stopWatch = new StopWatch();
+                stopWatch.start();
 
-            var future = CompletableFuture.supplyAsync(() -> {
+                // Remove async for debugging
                 ChatClientResponse lastResponse = null;
-                for (String prompt : scenario.getPrompts()) {
-                    lastResponse = chatClient.prompt()
-                            .system(scenario.getSystemPrompt())
-                            .user(prompt)
-                            .tools(scenario.getToolService())
-                            .call()
-                            .chatClientResponse();
+                for (int i = 0; i < scenario.getPrompts().size(); i++) {
+                    String prompt = scenario.getPrompts().get(i);
+                    logger.info("    Sending prompt {}/{}: {}",
+                            i + 1, scenario.getPrompts().size(),
+                            prompt.substring(0, Math.min(50, prompt.length())));
+
+                    try {
+                        lastResponse = chatClient.prompt()
+                                .system(scenario.getSystemPrompt())
+                                .user(prompt)
+                                .tools(scenario.getToolService())
+                                .call()
+                                .chatClientResponse();
+
+                        logger.info("    Received response for prompt {}", i + 1);
+
+                        // Log tool calls made
+                        int callsMade = getToolCallCount(scenario.getToolService());
+                        logger.info("    Tool calls so far: {}", callsMade);
+
+                    } catch (Exception e) {
+                        logger.error("    Error on prompt {}: {}", i + 1, e.getMessage());
+                        throw e;
+                    }
                 }
-                return lastResponse;
-            });
 
-            ChatClientResponse lastResponse = future.get(2, TimeUnit.MINUTES);
+                stopWatch.stop();
+                run.executionTimeMs = stopWatch.getTotalTimeMillis();
 
-            stopWatch.stop();
-            run.executionTimeMs = stopWatch.getTotalTimeMillis();
+                ChatResponse chatResponse = Objects.requireNonNull(lastResponse).chatResponse();
 
-            ChatResponse chatResponse = Objects.requireNonNull(lastResponse).chatResponse();
+                if (chatResponse != null && chatResponse.getMetadata().getUsage() != null) {
+                    var usage = chatResponse.getMetadata().getUsage();
+                    run.promptTokens = usage.getPromptTokens() != null ? usage.getPromptTokens() : 0;
+                    run.completionTokens = usage.getCompletionTokens() != null ? usage.getCompletionTokens() : 0;
 
-            if (chatResponse != null && chatResponse.getMetadata().getUsage() != null) {
-                var usage = chatResponse.getMetadata().getUsage();
-                run.promptTokens = usage.getPromptTokens() != null ? usage.getPromptTokens() : 0;
-                run.completionTokens = usage.getCompletionTokens() != null ? usage.getCompletionTokens() : 0;
+                    var pricing = provider.getPricing(model);
+                    run.cost = pricing.calculateCost(run.promptTokens, run.completionTokens);
+                }
 
-                var pricing = provider.getPricing(model);
-                run.cost = pricing.calculateCost(run.promptTokens, run.completionTokens);
+                run.accuracyScore = scenario.getValidation().validate();
+                run.success = run.accuracyScore > 0;
+                run.toolCallsMade = getToolCallCount(scenario.getToolService());
+
+            } catch (Exception e) {
+                logger.error("Error in test run: {}", e.getMessage());
+                run.success = false;
+                run.error = e.getMessage();
             }
 
-            run.accuracyScore = scenario.getValidation().validate();
-            run.success = run.accuracyScore > 0;
-            run.toolCallsMade = getToolCallCount(scenario.getToolService());
+            return run;
+        });
 
+        try {
+            return future.get(timeoutSeconds, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
-            logger.error("Error in test run: Timeout after 3 minutes");
+            future.cancel(true); // Interrupt the task
+            logger.error("Test run timed out after {} seconds", timeoutSeconds);
+            TestRun run = new TestRun();
             run.success = false;
-            run.error = "Timeout after 3 minutes";
+            run.error = "Timeout after " + timeoutSeconds + " seconds";
+            return run;
         } catch (Exception e) {
-            logger.error("Error in test run: {}", e.getMessage());
+            TestRun run = new TestRun();
             run.success = false;
             run.error = e.getMessage();
+            return run;
+        } finally {
+            executor.shutdownNow();
         }
-
-        return run;
     }
 
     private boolean isRateLimitError(String error) {
