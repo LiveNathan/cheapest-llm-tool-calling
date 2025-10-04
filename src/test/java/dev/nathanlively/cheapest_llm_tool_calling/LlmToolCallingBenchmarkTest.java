@@ -42,7 +42,8 @@ public class LlmToolCallingBenchmarkTest {
         return Stream.of(
                 "GROQ_API_KEY",
                 "MISTRALAI_API_KEY",
-                "DEEPSEEK_API_KEY"
+                "DEEPSEEK_API_KEY",
+                "GEMINI_API_KEY"
         );
     }
 
@@ -59,7 +60,8 @@ public class LlmToolCallingBenchmarkTest {
 
                 // Native Spring AI implementations
                 new MistralNativeProvider(),
-                new DeepseekNativeProvider()
+                new DeepseekNativeProvider(),
+                new GeminiNativeProvider()
         );
 
         benchmarkRunner = new BenchmarkRunner(providers, TEST_ITERATIONS, TIMEOUT_SECONDS);
@@ -97,71 +99,6 @@ public class LlmToolCallingBenchmarkTest {
         boolean anySuccess = results.getResults().values().stream()
                 .anyMatch(tr -> tr.getSuccessRate() > 0);
         assertThat(anySuccess).isTrue();
-    }
-
-    @Test
-    void simpleChannelRenamingBenchmark() {
-        TestScenario scenario = new TestScenario.Builder()
-                .name("Simple Channel Renaming with Memory")
-                .prompts("Rename channel 1 to Kick and channel 2 to Snare",
-                        "Now change Kick to Kick-In and Snare to Snare-Top")
-                .validation(this::validateSimpleChannelRenaming)
-                .toolService(mockConsoleService)
-                .systemPrompt(MIXING_CONSOLE_SYSTEM_PROMPT)
-                .build();
-
-        var results = benchmarkRunner.runBenchmark(scenario);
-        results.printReport();
-        results.determineWinner();
-    }
-
-    @Test
-    void complexBandSetupBenchmark() {
-        TestScenario scenario = new TestScenario.Builder()
-                .name("Complex Band Setup")
-                .prompts(List.of(
-                        """
-                                Set up drums on channels 1-7:
-                                - Kick (ch 1), Snare (ch 2), Hi-hat (ch 3), Tom 1 (ch 4), Tom 2 (ch 5), Overheads L/R (ch 6-7)
-                                - Apply compression to kick and snare
-                                - High-pass all drum channels at 80Hz
-                                """,
-                        """
-                                Now add the rhythm section and other instruments:
-                                - Bass on ch 8: DI input, compression, high-pass at 40Hz
-                                - Electric Guitar on ch 9: Amp mic, high-pass at 80Hz
-                                - Keys stereo on ch 10-11: DI, high-pass at 40Hz
-                                """,
-                        """
-                                Add vocals:
-                                - Lead Vocal on ch 12: Compression, high-pass at 100Hz
-                                - Backing Vocal on ch 13: High-pass at 100Hz
-                                """,
-                        """
-                                Set up routing for the band we just configured:
-                                - Create drum bus (bus 1) with all drums
-                                - Send vocals to reverb (fx bus 1)
-                                - Bass and lead vocal to wedge monitors (bus 2-3)
-                                - Guitar and keys to IEMs (bus 4-5)
-                                - All channels to main mix
-                                """,
-                        """
-                                Apply color coding to everything:
-                                - Drums: red (1)
-                                - Bass: green (2)
-                                - Guitar: blue (3)
-                                - Keys: purple (4)
-                                - Vocals: yellow (5)
-                                """
-                ))
-                .validation(this::validateComplexBandSetup)
-                .toolService(mockConsoleService)
-                .systemPrompt(MIXING_CONSOLE_SYSTEM_PROMPT)
-                .build();
-
-        var results = benchmarkRunner.runBenchmark(scenario);
-        results.printReport();
-        results.determineWinner();
     }
 
     @Test
@@ -214,12 +151,12 @@ public class LlmToolCallingBenchmarkTest {
         List<ApiCall> calls = mockConsoleService.getCapturedApiCalls();
         logger.info("Calls: {}", calls);
         double score = 0.0;
-        double maxScore = 4.0;
+        double maxScore = 6.0;
 
         if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick"))) score += 1;
-        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick-In"))) score += 1;
+        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick-In"))) score += 2;
         if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare"))) score += 1;
-        if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare-Top"))) score += 1;
+        if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare-Top"))) score += 2;
 
         return score / maxScore;
     }
@@ -227,39 +164,20 @@ public class LlmToolCallingBenchmarkTest {
     private double validateComplexBandSetup() {
         var calls = mockConsoleService.getCapturedApiCalls();
         double score = 0.0;
-        double maxScore = 20.0;
+        double maxScore = 14.0;
 
         // Channel names
         if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick"))) score += 1;
+        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick-In"))) score += 4;
         if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare"))) score += 1;
-        if (calls.contains(new ApiCall("ch.7.cfg.name", "Bass"))) score += 1;
-        if (calls.contains(new ApiCall("ch.11.cfg.name", "Lead Vocal"))) score += 1;
-
-        // Colors
-        if (calls.stream().anyMatch(c -> c.path().startsWith("ch.0.cfg.color") && c.value().equals(1))) score += 1;
-        if (calls.stream().anyMatch(c -> c.path().startsWith("ch.7.cfg.color") && c.value().equals(2))) score += 1;
-
-        // Compression
-        if (calls.contains(new ApiCall("ch.0.dyn.on", true))) score += 1;
-        if (calls.contains(new ApiCall("ch.1.dyn.on", true))) score += 1;
-        if (calls.contains(new ApiCall("ch.11.dyn.on", true))) score += 1;
-
-        // High-pass filters
-        if (calls.stream().anyMatch(c -> c.path().equals("ch.0.peq.bands.0.freq") &&
-                                         c.value().equals(80))) score += 1;
-        if (calls.stream().anyMatch(c -> c.path().equals("ch.7.peq.bands.0.freq") &&
-                                         c.value().equals(40))) score += 1;
-
-        // Routing
-        if (calls.stream().anyMatch(c -> c.path().contains("ch.11.mix.sends") &&
-                                         c.path().contains(".on"))) score += 2;
-        if (calls.stream().anyMatch(c -> c.path().contains("ch.7.mix.sends") &&
-                                         c.path().contains(".on"))) score += 2;
-
-        long busConfigCalls = calls.stream()
-                .filter(c -> c.path().contains(".mix.sends."))
-                .count();
-        if (busConfigCalls > 10) score += 5;
+        if (calls.contains(new ApiCall("ch.2.cfg.name", "Hi-hat"))) score += 1;
+        if (calls.contains(new ApiCall("ch.3.cfg.name", "Tom 1"))) score += 1;
+        if (calls.contains(new ApiCall("ch.4.cfg.name", "Tom 2"))) score += 1;
+        if (calls.contains(new ApiCall("ch.5.cfg.name", "Overheads L"))) score += 1;
+        if (calls.contains(new ApiCall("ch.6.cfg.name", "Overheads R"))) score += 1;
+        if (calls.contains(new ApiCall("ch.7.cfg.name", "bass"))) score += 1;
+        if (calls.contains(new ApiCall("ch.8.cfg.name", "guitar"))) score += 1;
+        if (calls.contains(new ApiCall("ch.11.cfg.name", "lead vocal"))) score += 1;
 
         return score / maxScore;
     }
@@ -269,7 +187,7 @@ public class LlmToolCallingBenchmarkTest {
                 .name("Simple Channel Renaming")
                 .prompts(
                         "Rename channel 1 to Kick and channel 2 to Snare",
-                        "Now rename channel 3 to Hat and channel 4 to Tom"
+                        "Now change Kick to Kick-In and Snare to Snare-Top"
                 )
                 .validation(this::validateSimpleChannelRenaming)
                 .toolService(mockConsoleService)
@@ -281,9 +199,10 @@ public class LlmToolCallingBenchmarkTest {
         return new TestScenario.Builder()
                 .name("Complex Band Setup")
                 .prompts(
-                        "Set up drums on channels 1-7: Kick, Snare, Hi-hat, Tom 1, Tom 2, Overheads L/R",
+                        "Name channels 1-7: Kick, Snare, Hi-hat, Tom 1, Tom 2, Overheads L/R",
                         "Add bass on ch 8 and guitar on ch 9",
-                        "Add lead vocal on ch 12"
+                        "Add lead vocal on ch 12",
+                        "Change Kick to Kick-In"
                 )
                 .validation(this::validateComplexBandSetup)
                 .toolService(mockConsoleService)

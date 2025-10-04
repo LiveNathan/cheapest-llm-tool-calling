@@ -120,7 +120,7 @@ public class BenchmarkRunner {
             TestRun run = new TestRun();
 
             try {
-                ChatClient chatClient = provider.createChatClient(model, true, scenario);
+                ChatClient chatClient = provider.createChatClient(model, scenario);
 
                 StopWatch stopWatch = new StopWatch();
                 stopWatch.start();

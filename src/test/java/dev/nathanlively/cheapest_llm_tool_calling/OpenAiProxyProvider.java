@@ -21,9 +21,8 @@ public abstract class OpenAiProxyProvider extends LlmProvider {
         this.baseUrl = baseUrl;
     }
 
-    // In OpenAiProxyProvider.createChatClient
     @Override
-    public ChatClient createChatClient(String model, boolean withMemory, TestScenario scenario) {
+    public ChatClient createChatClient(String model, TestScenario scenario) {
         String apiKey = System.getenv(apiKeyEnvVar);
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("API key not found for " + name + ". Set environment variable: " + apiKeyEnvVar);
@@ -40,20 +39,17 @@ public abstract class OpenAiProxyProvider extends LlmProvider {
                         .build())
                 .build();
 
-        ChatClient.Builder builder = ChatClient.builder(chatModel);
 
-        if (withMemory) {
-            log.info("Creating chat client with memory for {}/{}", name, model);
-            MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder()
-                    .maxMessages(10)
-                    .build();
-            builder.defaultAdvisors(
-                    MessageChatMemoryAdvisor.builder(chatMemory)
-                            .conversationId("test-" + System.currentTimeMillis()) // Unique ID
-                            .build(),
-                    new SimpleLoggerAdvisor()
-            );
-        }
+        log.info("Creating chat client with memory for {}/{}", name, model);
+        MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder()
+                .maxMessages(10)
+                .build();
+        ChatClient.Builder builder = ChatClient.builder(chatModel)
+                .defaultAdvisors(
+                        MessageChatMemoryAdvisor.builder(chatMemory)
+                                .conversationId("test-" + System.currentTimeMillis())
+                                .build(),
+                        new SimpleLoggerAdvisor());
 
         return builder.build();
     }

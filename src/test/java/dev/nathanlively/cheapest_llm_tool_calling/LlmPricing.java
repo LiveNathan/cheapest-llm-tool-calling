@@ -21,8 +21,8 @@ public class LlmPricing {
 
             Map.entry("deepseek/deepseek-chat", new ModelPricing(0.27, 1.10, true, 100)),
 
-            Map.entry("google/gemini-2.0-flash", new ModelPricing(0.10, 0.40, true, 150)),
-            Map.entry("google/gemini-2.0-flash-lite", new ModelPricing(0.075, 0.30, true, 150))
+            Map.entry("google/gemini-2.0-flash-001", new ModelPricing(0.10, 0.40, true, 150)),
+            Map.entry("google/gemini-2.0-flash-lite-001", new ModelPricing(0.075, 0.30, true, 150))
     );
 
     public record ModelPricing(

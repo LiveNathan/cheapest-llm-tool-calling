@@ -32,7 +32,7 @@ public abstract class LlmProvider {
         return apiKey != null && !apiKey.isBlank();
     }
 
-    public abstract ChatClient createChatClient(String model, boolean withMemory, TestScenario scenario);
+    public abstract ChatClient createChatClient(String model, TestScenario scenario);
 
     public LlmPricing.ModelPricing getPricing(String model) {
         String fullModelName = getFullModelName(model);

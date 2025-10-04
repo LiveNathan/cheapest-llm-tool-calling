@@ -19,7 +19,7 @@ public class MistralNativeProvider extends LlmProvider {
     }
 
     @Override
-    public ChatClient createChatClient(String model, boolean withMemory, TestScenario scenario) {
+    public ChatClient createChatClient(String model, TestScenario scenario) {
         String apiKey = System.getenv(apiKeyEnvVar);
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("API key not found for " + name + ". Set environment variable: " + apiKeyEnvVar);
@@ -38,10 +38,8 @@ public class MistralNativeProvider extends LlmProvider {
 
         ChatClient.Builder builder = ChatClient.builder(chatModel);
 
-        if (withMemory) {
-            MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder().build();
-            builder.defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build(), new SimpleLoggerAdvisor());
-        }
+        MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+        builder.defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build(), new SimpleLoggerAdvisor());
 
         return builder.build();
     }
