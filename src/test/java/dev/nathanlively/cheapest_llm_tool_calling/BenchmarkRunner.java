@@ -111,22 +111,19 @@ public class BenchmarkRunner {
         TestRun run = new TestRun();
 
         try {
-            ChatClient chatClient = provider.createChatClient(model, true);
+            ChatClient chatClient = provider.createChatClient(model, true, scenario);
 
             StopWatch stopWatch = new StopWatch();
             stopWatch.start();
 
             ChatClientResponse lastResponse = null;
-            boolean firstPrompt = true;
             for (String prompt : scenario.getPrompts()) {
-                ChatClient.ChatClientRequestSpec promptBuilder = chatClient.prompt().user(prompt).tools(scenario.getToolService());
-                if (firstPrompt) {
-                    promptBuilder.system(scenario.getSystemPrompt());
-                    firstPrompt = false;
-                }
-                lastResponse = promptBuilder.call().chatClientResponse();
+                lastResponse = chatClient.prompt()
+                        .user(prompt)
+                        .tools(scenario.getToolService())
+                        .call()
+                        .chatClientResponse();
             }
-
             stopWatch.stop();
             run.executionTimeMs = stopWatch.getTotalTimeMillis();
 

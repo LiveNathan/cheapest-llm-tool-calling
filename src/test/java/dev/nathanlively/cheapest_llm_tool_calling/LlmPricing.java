@@ -17,7 +17,8 @@ public class LlmPricing {
             Map.entry("mistral/mistral-medium-latest", new ModelPricing(2.70, 8.10, true, 150)),
             Map.entry("mistral/mistral-large-latest", new ModelPricing(3.00, 9.00, true, 120)),
             Map.entry("mistral/pixtral-12b-2409", new ModelPricing(0.15, 0.15, false, 180)),
-            Map.entry("mistral/codestral-2405", new ModelPricing(1.00, 3.00, true, 100))
+            Map.entry("mistral/codestral-2405", new ModelPricing(1.00, 3.00, true, 100)),
+            Map.entry("deepseek/deepseek-chat", new ModelPricing(0.27, 1.10, true, 100))
     );
 
     public record ModelPricing(

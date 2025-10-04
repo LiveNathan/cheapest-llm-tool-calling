@@ -40,7 +40,8 @@ public class LlmToolCallingBenchmarkTest {
     static Stream<String> apiKeyProvider() {
         return Stream.of(
                 new GroqProvider(),
-                new MistralProvider()
+                new MistralProvider(),
+                new DeepseekProvider()
         ).map(provider -> provider.apiKeyEnvVar);
     }
 
@@ -52,7 +53,8 @@ public class LlmToolCallingBenchmarkTest {
         // Configure providers to test
         List<LlmProvider> providers = List.of(
                 new GroqProvider(),
-                new MistralProvider()
+                new MistralProvider(),
+                new DeepseekProvider()
         );
 
         benchmarkRunner = new BenchmarkRunner(providers, TEST_ITERATIONS);
