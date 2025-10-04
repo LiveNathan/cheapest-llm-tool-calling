@@ -7,9 +7,9 @@ public class LlmPricing {
     public static final Map<String, ModelPricing> PRICING = Map.ofEntries(
             // Groq models
             Map.entry("groq/llama-3.1-8b-instant", new ModelPricing(0.05, 0.08, true, 840)),
+            Map.entry("groq/llama-3.3-70b-versatile", new ModelPricing(0.59, 0.79, true, 394)),
             Map.entry("groq/llama-3-8b-tool-use-preview", new ModelPricing(0.05, 0.08, true, 1345)),
             Map.entry("groq/llama-4-scout-preview", new ModelPricing(0.11, 0.34, true, 594)),
-            Map.entry("groq/llama-3.3-70b-versatile", new ModelPricing(0.59, 0.79, true, 394)),
             Map.entry("groq/qwen3-32b-preview", new ModelPricing(0.29, 0.59, true, 662)),
 
             // Mistral models (pricing from Mistral's website as of Jan 2025)

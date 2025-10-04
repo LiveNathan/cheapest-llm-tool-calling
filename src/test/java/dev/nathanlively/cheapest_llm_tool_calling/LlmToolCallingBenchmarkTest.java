@@ -39,10 +39,10 @@ public class LlmToolCallingBenchmarkTest {
 
     static Stream<String> apiKeyProvider() {
         return Stream.of(
-                new GroqProvider(),
-                new MistralProvider(),
-                new DeepseekProvider()
-        ).map(provider -> provider.apiKeyEnvVar);
+                "GROQ_API_KEY",
+                "MISTRALAI_API_KEY",
+                "DEEPSEEK_API_KEY"
+        );
     }
 
     @BeforeEach
@@ -50,11 +50,15 @@ public class LlmToolCallingBenchmarkTest {
         mockConsoleService = new MockMixingConsoleService();
         mockWeatherService = new MockWeatherService();
 
-        // Configure providers to test
         List<LlmProvider> providers = List.of(
-                new GroqProvider(),
-                new MistralProvider(),
-                new DeepseekProvider()
+                // OpenAI Proxy implementations
+                new GroqProxyProvider(),
+                new MistralProxyProvider(),
+                new DeepseekProxyProvider(),
+
+                // Native Spring AI implementations
+                new MistralNativeProvider(),
+                new DeepseekNativeProvider()
         );
 
         benchmarkRunner = new BenchmarkRunner(providers, TEST_ITERATIONS);

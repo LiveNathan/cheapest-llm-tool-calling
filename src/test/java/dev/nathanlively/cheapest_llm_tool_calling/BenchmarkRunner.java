@@ -44,12 +44,11 @@ public class BenchmarkRunner {
             for (String model : provider.getSupportedModels()) {
                 String fullModelName = provider.getFullModelName(model);
 
-                if (!LlmPricing.PRICING.containsKey(fullModelName)) {
+                var pricing = provider.getPricing(model);
+                if (pricing == null) {
                     logger.warn("Skipping {} - pricing not configured", fullModelName);
                     continue;
                 }
-
-                var pricing = LlmPricing.PRICING.get(fullModelName);
                 if (!pricing.supportsToolCalling()) {
                     logger.info("Skipping {} - does not support tool calling", fullModelName);
                     continue;
