@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class LlmToolCallingBenchmarkTest {
     private static final Logger logger = LoggerFactory.getLogger(LlmToolCallingBenchmarkTest.class);
     private static final int TEST_ITERATIONS = 3;
-    private static final int TIMEOUT_SECONDS = 60;
+    private static final int TIMEOUT_SECONDS = 60 * 3;
 
     private static final String MIXING_CONSOLE_SYSTEM_PROMPT = """
             - API uses 0-based indexing (ch.0, ch.1, ch.2...)
