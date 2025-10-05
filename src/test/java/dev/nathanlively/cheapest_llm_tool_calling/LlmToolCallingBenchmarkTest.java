@@ -6,6 +6,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -23,16 +24,11 @@ public class LlmToolCallingBenchmarkTest {
     private static final int TIMEOUT_SECONDS = 60;
 
     private static final String MIXING_CONSOLE_SYSTEM_PROMPT = """
-            You are controlling a mixing console API that uses 0-based indexing.
-            When users refer to "channel 1", you must use index 0 in the API (ch.0).
-            When users refer to "channel 2", you must use index 1 in the API (ch.1).
-            Always subtract 1 from the user's channel numbers to get the correct API index.
+            - API uses 0-based indexing (ch.0, ch.1, ch.2...)
+            - Humans use 1-based indexing (Channel 1, Channel 2, Channel 3...)
+            - You must translate human/user requests from 1-based to 0-based.
             
-            Examples:
-            - User says "channel 1" → use ch.0 in API
-            - User says "channels 1-7" → use ch.0 through ch.6 in API
-            - User says "channel 12" → use ch.11 in API
-            """;
+            Examples: Human "Channel 1" → API ch.0 | Human "Channels 1-4" → API ch.0-ch.3""";
 
     private MockMixingConsoleService mockConsoleService;
     private MockWeatherService mockWeatherService;
@@ -113,7 +109,7 @@ public class LlmToolCallingBenchmarkTest {
                 createComplexScenario()
         };
 
-        var allResults = new java.util.HashMap<String, Double>();
+        HashMap<String, Double> allResults = new HashMap<>();
 
         for (TestScenario scenario : scenarios) {
             var results = benchmarkRunner.runBenchmark(scenario);
