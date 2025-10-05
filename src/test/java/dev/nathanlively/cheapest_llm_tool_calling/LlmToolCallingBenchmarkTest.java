@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @EnabledIfEnvironmentVariable(named = "GROQ_API_KEY", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "MISTRALAI_API_KEY", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "GEMINI_API_KEY", matches = ".+")
 public class LlmToolCallingBenchmarkTest {
     private static final Logger logger = LoggerFactory.getLogger(LlmToolCallingBenchmarkTest.class);
     private static final int TEST_ITERATIONS = 3;
@@ -58,7 +59,7 @@ public class LlmToolCallingBenchmarkTest {
                 // Native Spring AI implementations
 //                new MistralNativeProvider(),
                 new DeepseekNativeProvider(),
-                new GeminiNativeProvider(),
+                new GoogleNativeProvider(),
                 new OpenAiNativeProvider()
         );
 

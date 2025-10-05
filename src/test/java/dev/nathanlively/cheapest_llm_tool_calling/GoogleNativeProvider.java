@@ -10,12 +10,12 @@ import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
 
 import java.util.List;
 
-public class GeminiNativeProvider extends LlmProvider {
+public class GoogleNativeProvider extends LlmProvider {
     private static final String flash = GoogleGenAiChatModel.ChatModel.GEMINI_2_0_FLASH.getValue();
     private static final String flashLite = GoogleGenAiChatModel.ChatModel.GEMINI_2_0_FLASH_LIGHT.getValue();
     private static final List<String> GEMINI_MODELS = List.of(flash, flashLite);
 
-    public GeminiNativeProvider() {
+    public GoogleNativeProvider() {
         super("GoogleNative", "GEMINI_API_KEY", GEMINI_MODELS);
     }
 
