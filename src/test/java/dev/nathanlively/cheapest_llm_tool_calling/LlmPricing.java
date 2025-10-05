@@ -19,10 +19,13 @@ public class LlmPricing {
             Map.entry("mistral/pixtral-12b-2409", new ModelPricing(0.15, 0.15, false, 180)),
             Map.entry("mistral/codestral-2405", new ModelPricing(1.00, 3.00, true, 100)),
 
-            Map.entry("deepseek/deepseek-chat", new ModelPricing(0.27, 1.10, true, 100)),
+            Map.entry("deepseek/deepseek-chat", new ModelPricing(0.28, 0.42, true, 100)),
 
             Map.entry("google/gemini-2.0-flash-001", new ModelPricing(0.10, 0.40, true, 150)),
-            Map.entry("google/gemini-2.0-flash-lite-001", new ModelPricing(0.075, 0.30, true, 150))
+            Map.entry("google/gemini-2.0-flash-lite-001", new ModelPricing(0.075, 0.30, true, 150)),
+
+            Map.entry("openai/gpt-4o-mini", new ModelPricing(0.15, 0.60, true, 150)),
+            Map.entry("openai/gpt-4.1-nano", new ModelPricing(0.10, 0.40, true, 150))
     );
 
     public record ModelPricing(

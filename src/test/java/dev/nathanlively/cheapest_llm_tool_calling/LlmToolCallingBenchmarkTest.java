@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @EnabledIfEnvironmentVariable(named = "MISTRALAI_API_KEY", matches = ".+")
 public class LlmToolCallingBenchmarkTest {
     private static final Logger logger = LoggerFactory.getLogger(LlmToolCallingBenchmarkTest.class);
-    private static final int TEST_ITERATIONS = 1;
+    private static final int TEST_ITERATIONS = 3;
     private static final int TIMEOUT_SECONDS = 60;
 
     private static final String MIXING_CONSOLE_SYSTEM_PROMPT = """
@@ -39,7 +39,8 @@ public class LlmToolCallingBenchmarkTest {
                 "GROQ_API_KEY",
                 "MISTRALAI_API_KEY",
                 "DEEPSEEK_API_KEY",
-                "GEMINI_API_KEY"
+                "GEMINI_API_KEY",
+                "OPENAI_API_KEY"
         );
     }
 
@@ -51,13 +52,14 @@ public class LlmToolCallingBenchmarkTest {
         List<LlmProvider> providers = List.of(
                 // OpenAI Proxy implementations
                 new GroqProxyProvider(),
-                new MistralProxyProvider(),
+//                new MistralProxyProvider(),  // always fails with error "Unexpected role 'system' after role 'assistant'"
                 new DeepseekProxyProvider(),
 
                 // Native Spring AI implementations
-                new MistralNativeProvider(),
+//                new MistralNativeProvider(),
                 new DeepseekNativeProvider(),
-                new GeminiNativeProvider()
+                new GeminiNativeProvider(),
+                new OpenAiNativeProvider()
         );
 
         benchmarkRunner = new BenchmarkRunner(providers, TEST_ITERATIONS, TIMEOUT_SECONDS);
