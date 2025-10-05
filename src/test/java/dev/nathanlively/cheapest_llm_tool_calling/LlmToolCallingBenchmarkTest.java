@@ -145,47 +145,14 @@ public class LlmToolCallingBenchmarkTest {
     }
 
     // Helper methods
-    private double validateSimpleChannelRenaming() {
-        List<ApiCall> calls = mockConsoleService.getCapturedApiCalls();
-        logger.info("Calls: {}", calls);
-        double score = 0.0;
-        double maxScore = 6.0;
-
-        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick"))) score += 1;
-        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick-In"))) score += 2;
-        if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare"))) score += 1;
-        if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare-Top"))) score += 2;
-
-        return score / maxScore;
-    }
-
-    private double validateComplexBandSetup() {
-        var calls = mockConsoleService.getCapturedApiCalls();
-        double score = 0.0;
-        double maxScore = 14.0;
-
-        // Channel names
-        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick"))) score += 1;
-        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick-In"))) score += 4;
-        if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare"))) score += 1;
-        if (calls.contains(new ApiCall("ch.2.cfg.name", "Hi-hat"))) score += 1;
-        if (calls.contains(new ApiCall("ch.3.cfg.name", "Tom 1"))) score += 1;
-        if (calls.contains(new ApiCall("ch.4.cfg.name", "Tom 2"))) score += 1;
-        if (calls.contains(new ApiCall("ch.5.cfg.name", "Overheads L"))) score += 1;
-        if (calls.contains(new ApiCall("ch.6.cfg.name", "Overheads R"))) score += 1;
-        if (calls.contains(new ApiCall("ch.7.cfg.name", "bass"))) score += 1;
-        if (calls.contains(new ApiCall("ch.8.cfg.name", "guitar"))) score += 1;
-        if (calls.contains(new ApiCall("ch.11.cfg.name", "lead vocal"))) score += 1;
-
-        return score / maxScore;
-    }
-
     private TestScenario createSimpleScenario() {
         return new TestScenario.Builder()
-                .name("Simple Channel Renaming")
+                .name("Simple Channel Renaming with Memory")
                 .prompts(
                         "Rename channel 1 to Kick and channel 2 to Snare",
-                        "Now change Kick to Kick-In and Snare to Snare-Top"
+                        "What did you just name channel 1?",  // Tests memory
+                        "Now change the first channel you renamed to Kick-In and the second to Snare-Top",  // Tests memory of order
+                        "Rename channel 3 to the same as channel 1 but with 'Backup-' prefix"  // Tests read + memory
                 )
                 .validation(this::validateSimpleChannelRenaming)
                 .toolService(mockConsoleService)
@@ -193,19 +160,93 @@ public class LlmToolCallingBenchmarkTest {
                 .build();
     }
 
+    private double validateSimpleChannelRenaming() {
+        List<ApiCall> calls = mockConsoleService.getCapturedApiCalls();
+        logger.info("Simple validation - Captured calls: {}", calls);
+
+        double score = 0.0;
+        double maxScore = 10.0;
+
+        // First prompt: Initial naming
+        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick"))) score += 2;
+        if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare"))) score += 2;
+
+        // Second prompt: Should use getParameter to check (not required but good)
+        // We can't validate this directly but it shouldn't create new calls
+
+        // Third prompt: Renaming based on memory
+        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick-In"))) score += 2;
+        if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare-Top"))) score += 2;
+
+        // Fourth prompt: Read ch.0 and apply prefix
+        if (calls.contains(new ApiCall("ch.2.cfg.name", "Backup-Kick-In"))) score += 2;
+
+        logger.info("Simple validation score: {}/{}", score, maxScore);
+        return score / maxScore;
+    }
+
     private TestScenario createComplexScenario() {
         return new TestScenario.Builder()
-                .name("Complex Band Setup")
+                .name("Complex Band Setup with Memory")
                 .prompts(
-                        "Name channels 1-7: Kick, Snare, Hi-hat, Tom 1, Tom 2, Overheads L/R",
-                        "Add bass on ch 8 and guitar on ch 9",
-                        "Add lead vocal on ch 12",
-                        "Change Kick to Kick-In"
+                        "Name channels 1-7: Kick, Snare, Hi-hat, Tom 1, Tom 2, Overheads L, Overheads R",
+                        "Add bass on channel 8 and guitar on channel 9",
+                        "What's on channel 6? Now swap it with what's on channel 9",  // Tests read + swap
+                        "Add lead vocal on channel 12, backing vocals on 13-14",
+                        "Change all drum channels (the first 7 you set up) to have 'DR-' prefix",  // Tests memory of what's drums
+                        "Rename the Kick channel specifically to 'DR-Kick-In'"  // Tests finding and updating specific channel
                 )
                 .validation(this::validateComplexBandSetup)
                 .toolService(mockConsoleService)
                 .systemPrompt(MIXING_CONSOLE_SYSTEM_PROMPT)
                 .build();
+    }
+
+    private double validateComplexBandSetup() {
+        var calls = mockConsoleService.getCapturedApiCalls();
+        logger.info("Complex validation - Total calls made: {}", calls.size());
+        logger.info("Complex validation - Captured calls: {}", calls);
+
+        double score = 0.0;
+        double maxScore = 22.0;
+
+        // First prompt: Initial drum setup (7 points)
+        if (calls.contains(new ApiCall("ch.0.cfg.name", "Kick"))) score += 1;
+        if (calls.contains(new ApiCall("ch.1.cfg.name", "Snare"))) score += 1;
+        if (calls.contains(new ApiCall("ch.2.cfg.name", "Hi-hat"))) score += 1;
+        if (calls.contains(new ApiCall("ch.3.cfg.name", "Tom 1"))) score += 1;
+        if (calls.contains(new ApiCall("ch.4.cfg.name", "Tom 2"))) score += 1;
+        if (calls.contains(new ApiCall("ch.5.cfg.name", "Overheads L"))) score += 1;
+        if (calls.contains(new ApiCall("ch.6.cfg.name", "Overheads R"))) score += 1;
+
+        // Second prompt: Bass and guitar (2 points)
+        if (calls.contains(new ApiCall("ch.7.cfg.name", "bass"))) score += 1;
+        if (calls.contains(new ApiCall("ch.8.cfg.name", "guitar"))) score += 1;
+
+        // Third prompt: Swap ch.6 (Overheads R) with ch.8 (guitar) (2 points)
+        if (calls.contains(new ApiCall("ch.5.cfg.name", "guitar"))) score += 1;
+        if (calls.contains(new ApiCall("ch.8.cfg.name", "Overheads R"))) score += 1;
+
+        // Fourth prompt: Vocals (3 points)
+        if (calls.contains(new ApiCall("ch.11.cfg.name", "lead vocal"))) score += 1;
+        if (calls.contains(new ApiCall("ch.12.cfg.name", "backing vocals"))) score += 1;
+        if (calls.contains(new ApiCall("ch.13.cfg.name", "backing vocals"))) score += 1;
+
+        // Fifth prompt: DR- prefix for all drums (7 points)
+        // Note: After swap, drums are on channels 0-4, 5 (guitar now), 6, 8 (OH-R now)
+        if (calls.contains(new ApiCall("ch.0.cfg.name", "DR-Kick"))) score += 1;
+        if (calls.contains(new ApiCall("ch.1.cfg.name", "DR-Snare"))) score += 1;
+        if (calls.contains(new ApiCall("ch.2.cfg.name", "DR-Hi-hat"))) score += 1;
+        if (calls.contains(new ApiCall("ch.3.cfg.name", "DR-Tom 1"))) score += 1;
+        if (calls.contains(new ApiCall("ch.4.cfg.name", "DR-Tom 2"))) score += 1;
+        if (calls.contains(new ApiCall("ch.5.cfg.name", "DR-Overheads L"))) score += 1;
+        if (calls.contains(new ApiCall("ch.8.cfg.name", "DR-Overheads R"))) score += 1;
+
+        // Sixth prompt: Specific kick rename (1 point)
+        if (calls.contains(new ApiCall("ch.0.cfg.name", "DR-Kick-In"))) score += 1;
+
+        logger.info("Complex validation score: {}/{}", score, maxScore);
+        return score / maxScore;
     }
 
     private double calculateOverallScore(TestResults tr) {
