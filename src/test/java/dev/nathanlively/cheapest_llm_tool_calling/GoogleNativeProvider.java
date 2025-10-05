@@ -32,6 +32,7 @@ public class GoogleNativeProvider extends LlmProvider {
         final GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
                 .model(model)
                 .temperature(0.1)
+                .candidateCount(1)  // The number of generated response messages to return. This value must be between [1, 8], inclusive. Defaults to 1.
                 .build();
         GoogleGenAiChatModel chatModel = GoogleGenAiChatModel.builder()
                 .genAiClient(genAiClient)
@@ -39,8 +40,11 @@ public class GoogleNativeProvider extends LlmProvider {
                 .build();
 
         return ChatClient.builder(chatModel)
-                .defaultAdvisors(MessageChatMemoryAdvisor.builder(MessageWindowChatMemory.builder().build()).build(),
-                        new SimpleLoggerAdvisor()).build();
+                .defaultAdvisors(
+                        new EmptyMessageFilterAdvisor(),
+                        MessageChatMemoryAdvisor.builder(MessageWindowChatMemory.builder().build()).build(),
+                        new SimpleLoggerAdvisor())
+                .build();
     }
 
     public String getFullModelName(String model) {
