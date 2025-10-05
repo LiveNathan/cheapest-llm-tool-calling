@@ -13,10 +13,10 @@ import java.util.List;
 public class GeminiNativeProvider extends LlmProvider {
     private static final String flash = GoogleGenAiChatModel.ChatModel.GEMINI_2_0_FLASH.getValue();
     private static final String flashLite = GoogleGenAiChatModel.ChatModel.GEMINI_2_0_FLASH_LIGHT.getValue();
-    private static final List<String> DEEPSEEK_MODELS = List.of(flash, flashLite);
+    private static final List<String> GEMINI_MODELS = List.of(flash, flashLite);
 
     public GeminiNativeProvider() {
-        super("GoogleNative", "GEMINI_API_KEY", DEEPSEEK_MODELS);
+        super("GoogleNative", "GEMINI_API_KEY", GEMINI_MODELS);
     }
 
     @Override
@@ -27,7 +27,7 @@ public class GeminiNativeProvider extends LlmProvider {
         }
 
         Client genAiClient = Client.builder()
-                .apiKey(System.getenv("GOOGLE_API_KEY"))
+                .apiKey(System.getenv("GEMINI_API_KEY"))
                 .build();
         final GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
                 .model(model)
