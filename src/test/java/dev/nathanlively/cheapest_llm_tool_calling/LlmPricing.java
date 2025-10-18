@@ -26,7 +26,15 @@ public class LlmPricing {
             Map.entry("google/gemini-2.5-flash-lite", new ModelPricing(0.10, 0.40, true, 150)),
 
             Map.entry("openai/gpt-4o-mini", new ModelPricing(0.15, 0.60, true, 150)),
-            Map.entry("openai/gpt-4.1-nano", new ModelPricing(0.10, 0.40, true, 150))
+            Map.entry("openai/gpt-4.1-nano", new ModelPricing(0.10, 0.40, true, 150)),
+
+            // Ollama models (local - only compute cost, no API pricing)
+            Map.entry("ollama/qwen2.5-1.5b", new ModelPricing(0.0, 0.0, true, 100)),
+            Map.entry("ollama/llama3.1-8b", new ModelPricing(0.0, 0.0, true, 50)),
+            Map.entry("ollama/mistral-7b-instruct", new ModelPricing(0.0, 0.0, true, 60)),
+            Map.entry("ollama/gemma2-2b", new ModelPricing(0.0, 0.0, true, 80)),
+            Map.entry("ollama/orieg-gemma3-tools-4b", new ModelPricing(0.0, 0.0, true, 70)),
+            Map.entry("ollama/orieg-gemma3-tools-12b", new ModelPricing(0.0, 0.0, true, 40))
     );
 
     public record ModelPricing(
