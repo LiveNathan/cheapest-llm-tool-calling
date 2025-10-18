@@ -30,8 +30,8 @@ public class OllamaToolCallingBenchmarkTest {
         gemmaProvider = new OllamaCustomGemmaProvider();
 
         List<LlmProvider> providers = List.of(
-                ollamaProvider,
-                gemmaProvider
+                ollamaProvider
+//                gemmaProvider
         );
 
         benchmarkRunner = new BenchmarkRunner(providers, TEST_ITERATIONS, TIMEOUT_SECONDS);

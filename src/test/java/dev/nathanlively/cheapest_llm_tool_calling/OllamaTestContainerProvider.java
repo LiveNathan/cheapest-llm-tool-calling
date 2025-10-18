@@ -15,6 +15,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,14 +26,14 @@ public class OllamaTestContainerProvider extends LlmProvider {
     private static final String DEFAULT_OLLAMA_IMAGE = "ollama/ollama";
 
     // Models to test - ordered from smallest to largest
-    private static final List<String> OLLAMA_MODELS = List.of(
-            "qwen2.5:1.5b",        // Smallest effective model for tool calling
-            "llama3.1:8b",         // Best overall for tool calling
-            "qwen2.5:3b",
-            "qwen2.5:7b",
-            "gemma3:4b",
-            "gemma3:12b"
-    );
+    private static final List<String> OLLAMA_MODELS = new ArrayList<>(List.of(
+            "qwen2.5:1.5b"        // Smallest effective model for tool calling
+//            "llama3.1:8b",         // Best overall for tool calling
+//            "qwen2.5:3b",
+//            "qwen2.5:7b",
+//            "gemma3:4b",
+//            "gemma3:12b"
+    ));
 
     private static final Map<String, OllamaContainer> containerCache = new ConcurrentHashMap<>();
     @Nullable

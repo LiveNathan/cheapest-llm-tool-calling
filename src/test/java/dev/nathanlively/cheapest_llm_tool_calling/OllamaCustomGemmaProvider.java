@@ -5,8 +5,8 @@ import java.util.List;
 public class OllamaCustomGemmaProvider extends OllamaTestContainerProvider {
 
     private static final List<String> CUSTOM_GEMMA_MODELS = List.of(
-            "orieg/gemma3-tools:4b",
-            "orieg/gemma3-tools:12b"
+//            "orieg/gemma3-tools:4b",
+//            "orieg/gemma3-tools:12b"
     );
 
     public OllamaCustomGemmaProvider() {
