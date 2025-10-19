@@ -24,13 +24,21 @@ public class OllamaTestContainerProvider extends LlmProvider {
 
     // Models to test - ordered from smallest to largest
     private static final List<String> OLLAMA_MODELS = new ArrayList<>(List.of(
-            "qwen3:0.6b",        // Smallest effective model for tool calling
-            "qwen3:1.7b",
-            "qwen3:4b",
-            "qwen3:8b",
-            "llama3.2:1b",
-            "llama3.2:3b",
-            "llama3.1:8b"
+//            "qwen3:0.6b",        // Smallest effective model for tool calling
+//            "qwen3:1.7b",
+//            "qwen3:4b",
+//            "qwen3:8b",
+//            "llama3.2:1b",
+//            "llama3.2:3b",
+//            "llama3.1:8b",
+            "orieg/gemma3-tools:1b",
+//            "orieg/gemma3-tools:4b",
+//            "orieg/gemma3-tools:1b-it-qat",
+//            "orieg/gemma3-tools:4b-it-qat",
+            "okamototk/gemma3-tools:1b",
+//            "okamototk/gemma3-tools:4b",
+            "ebdm/gemma3-enhanced:12b",
+            "phi4-mini:3.8b"
     ));
 
     @Nullable
@@ -53,6 +61,7 @@ public class OllamaTestContainerProvider extends LlmProvider {
         if (container == null) {
             logger.info("Starting Ollama container...");
             container = new OllamaContainer(OLLAMA_IMAGE);
+            container.withReuse(true);
             container.start();
 
             String baseUrl = container.getEndpoint();
