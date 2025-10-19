@@ -8,7 +8,6 @@ import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.ai.ollama.api.OllamaModel;
 import org.springframework.ai.ollama.management.OllamaModelManager;
 import org.springframework.ai.ollama.management.PullModelStrategy;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -17,7 +16,6 @@ import org.testcontainers.ollama.OllamaContainer;
 import static org.assertj.core.api.Assertions.*;
 
 @Testcontainers
-@SpringBootTest
 public class OllamaTestcontainerTest {
 
     @Container
