@@ -37,7 +37,6 @@ public class OllamaTestContainerProvider extends LlmProvider {
 //            "orieg/gemma3-tools:4b-it-qat",
             "okamototk/gemma3-tools:1b",
 //            "okamototk/gemma3-tools:4b",
-            "ebdm/gemma3-enhanced:12b",
             "phi4-mini:3.8b"
     ));
 
