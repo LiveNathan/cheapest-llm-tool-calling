@@ -10,34 +10,39 @@ import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.ai.ollama.management.OllamaModelManager;
+import org.springframework.ai.ollama.management.PullModelStrategy;
 import org.testcontainers.ollama.OllamaContainer;
-import org.testcontainers.utility.DockerImageName;
 
-import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class OllamaTestContainerProvider extends LlmProvider {
     private static final Logger logger = LoggerFactory.getLogger(OllamaTestContainerProvider.class);
-    private static final String DEFAULT_OLLAMA_IMAGE = "ollama/ollama";
+    private static final String OLLAMA_IMAGE = "ollama/ollama";
 
     // Models to test - ordered from smallest to largest
     private static final List<String> OLLAMA_MODELS = new ArrayList<>(List.of(
-            "qwen2.5:1.5b"        // Smallest effective model for tool calling
-//            "llama3.1:8b",         // Best overall for tool calling
-//            "qwen2.5:3b",
-//            "qwen2.5:7b",
-//            "gemma3:4b",
-//            "gemma3:12b"
+            "qwen3:0.6b",        // Smallest effective model for tool calling
+            "qwen3:1.7b",
+            "qwen3:4b",
+            "qwen3:8b",
+            "gemma3:270m",
+            "gemma3:1b",
+            "gemma3:4b",
+            "gemma3:12b",
+            "llama3.2:1b",
+            "llama3.2:3b",
+            "llama3.1:8b"
     ));
 
-    private static final Map<String, OllamaContainer> containerCache = new ConcurrentHashMap<>();
     @Nullable
-    private OllamaContainer activeContainer;
+    private static OllamaContainer container;
+    @Nullable
+    private static OllamaApi ollamaApi;
+    @Nullable
+    private static OllamaModelManager modelManager;
 
     public OllamaTestContainerProvider() {
         super("Ollama", "OLLAMA_LOCAL", OLLAMA_MODELS);
@@ -45,22 +50,33 @@ public class OllamaTestContainerProvider extends LlmProvider {
 
     @Override
     public boolean isAvailable() {
-        // Always available since we're using testcontainers
         return true;
+    }
+
+    private void ensureContainerStarted() {
+        if (container == null) {
+            logger.info("Starting Ollama container...");
+            container = new OllamaContainer(OLLAMA_IMAGE);
+            container.start();
+
+            String baseUrl = container.getEndpoint();
+            ollamaApi = OllamaApi.builder().baseUrl(baseUrl).build();
+            modelManager = new OllamaModelManager(ollamaApi);
+
+            logger.info("Ollama container started at: {}", baseUrl);
+        }
     }
 
     @Override
     public ChatClient createChatClient(String model, TestScenario scenario) {
-        ensureContainerRunning(model);
+        ensureContainerStarted();
 
-        String baseUrl = Objects.requireNonNull(activeContainer).getEndpoint();
-        logger.info("Creating Ollama chat client for model {} at {}", model, baseUrl);
+        logger.info("Ensuring model {} is available...", model);
+        Objects.requireNonNull(modelManager).pullModel(model, PullModelStrategy.WHEN_MISSING);
 
-        OllamaApi ollamaApi = OllamaApi.builder().baseUrl(baseUrl).build();
         OllamaChatOptions chatOptions = OllamaChatOptions.builder()
                 .model(model)
                 .temperature(0.1)
-                .numCtx(8192)  // Context window size
                 .build();
 
         OllamaChatModel chatModel = OllamaChatModel.builder()
@@ -82,56 +98,14 @@ public class OllamaTestContainerProvider extends LlmProvider {
                 .build();
     }
 
-    private void ensureContainerRunning(String model) {
-
-        if (containerCache.containsKey(model)) {
-            activeContainer = containerCache.get(model);
-            if (!activeContainer.isRunning()) {
-                activeContainer.start();
-            }
-            return;
+    public static void cleanup() {
+        if (container != null && container.isRunning()) {
+            logger.info("Stopping Ollama container...");
+            container.stop();
+            container = null;
+            ollamaApi = null;
+            modelManager = null;
         }
-
-        logger.info("Starting Ollama container for model: {}", model);
-
-        OllamaContainer container = new OllamaContainer(
-                DockerImageName.parse(DEFAULT_OLLAMA_IMAGE)
-                        .asCompatibleSubstituteFor("ollama/ollama")
-        );
-
-        container.withStartupTimeout(Duration.ofMinutes(5));
-        container.start();
-
-        // Pull the model
-        pullModel(container, model);
-
-        containerCache.put(model, container);
-        activeContainer = container;
-    }
-
-    protected void pullModel(OllamaContainer container, String model) {
-        logger.info("Pulling model {} - this may take several minutes...", model);
-
-        try {
-            var result = container.execInContainer("ollama", "pull", model);
-            if (result.getExitCode() != 0) {
-                logger.error("Failed to pull model {}: {}", model, result.getStderr());
-                throw new RuntimeException("Failed to pull model: " + model);
-            }
-            logger.info("Successfully pulled model: {}", model);
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException("Error pulling model: " + model, e);
-        }
-    }
-
-    public void cleanup() {
-        containerCache.values().forEach(container -> {
-            if (container.isRunning()) {
-                logger.info("Stopping Ollama container");
-                container.stop();
-            }
-        });
-        containerCache.clear();
     }
 
     @Override

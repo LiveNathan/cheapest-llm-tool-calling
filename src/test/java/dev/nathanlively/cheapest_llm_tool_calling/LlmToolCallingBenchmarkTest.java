@@ -1,5 +1,6 @@
 package dev.nathanlively.cheapest_llm_tool_calling;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -21,8 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @EnabledIfEnvironmentVariable(named = "GEMINI_API_KEY", matches = ".+")
 public class LlmToolCallingBenchmarkTest {
     private static final Logger logger = LoggerFactory.getLogger(LlmToolCallingBenchmarkTest.class);
-    private static final int TEST_ITERATIONS = 5;
-    private static final int TIMEOUT_SECONDS = 60 * 3;
+    private static final int TEST_ITERATIONS = 1;
+    private static final int TIMEOUT_SECONDS = 60 * 5;
 
     private static final String MIXING_CONSOLE_SYSTEM_PROMPT = """
             - API uses 0-based indexing (ch.0, ch.1, ch.2...)
@@ -51,19 +52,20 @@ public class LlmToolCallingBenchmarkTest {
         mockWeatherService = new MockWeatherService();
 
         List<LlmProvider> providers = List.of(
-                // OpenAI Proxy implementations
-                new GroqProxyProvider(),
-//                new MistralProxyProvider(),  // always fails with error "Unexpected role 'system' after role 'assistant'"
-                new DeepseekProxyProvider(),
-
-                // Native Spring AI implementations
-//                new MistralNativeProvider(),
-                new DeepseekNativeProvider(),
-                new GoogleNativeProvider(),
-                new OpenAiNativeProvider()
+//                new GroqProxyProvider(),
+//                new DeepseekProxyProvider(),
+//                new DeepseekNativeProvider(),
+//                new GoogleNativeProvider(),
+//                new OpenAiNativeProvider(),
+                new OllamaTestContainerProvider()
         );
 
         benchmarkRunner = new BenchmarkRunner(providers, TEST_ITERATIONS, TIMEOUT_SECONDS);
+    }
+
+    @AfterAll
+    static void tearDown() {
+        OllamaTestContainerProvider.cleanup();
     }
 
     @ParameterizedTest

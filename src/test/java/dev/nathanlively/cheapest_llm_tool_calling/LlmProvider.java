@@ -36,11 +36,11 @@ public abstract class LlmProvider {
 
     public LlmPricing.ModelPricing getPricing(String model) {
         String fullModelName = getFullModelName(model);
-        var pricing = LlmPricing.PRICING.get(fullModelName);
+        var pricing = LlmPricing.getPricing(fullModelName);
         if (pricing != null) {
             return pricing;
         }
         String proxyModelName = fullModelName.replace("-native", "");
-        return LlmPricing.PRICING.get(proxyModelName);
+        return LlmPricing.getPricing(proxyModelName);
     }
 }

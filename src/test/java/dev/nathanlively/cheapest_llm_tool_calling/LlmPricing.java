@@ -4,7 +4,7 @@ import java.util.Map;
 
 public class LlmPricing {
 
-    public static final Map<String, ModelPricing> PRICING = Map.ofEntries(
+    private static final Map<String, ModelPricing> PRICING_MAP = Map.ofEntries(
             // Groq models
             Map.entry("groq/llama-3.1-8b-instant", new ModelPricing(0.05, 0.08, true, 840)),
             Map.entry("groq/llama-3.3-70b-versatile", new ModelPricing(0.59, 0.79, true, 394)),
@@ -26,16 +26,15 @@ public class LlmPricing {
             Map.entry("google/gemini-2.5-flash-lite", new ModelPricing(0.10, 0.40, true, 150)),
 
             Map.entry("openai/gpt-4o-mini", new ModelPricing(0.15, 0.60, true, 150)),
-            Map.entry("openai/gpt-4.1-nano", new ModelPricing(0.10, 0.40, true, 150)),
-
-            // Ollama models (local - only compute cost, no API pricing)
-            Map.entry("ollama/qwen2.5-1.5b", new ModelPricing(0.0, 0.0, true, 100)),
-            Map.entry("ollama/llama3.1-8b", new ModelPricing(0.0, 0.0, true, 50)),
-            Map.entry("ollama/mistral-7b-instruct", new ModelPricing(0.0, 0.0, true, 60)),
-            Map.entry("ollama/gemma2-2b", new ModelPricing(0.0, 0.0, true, 80)),
-            Map.entry("ollama/orieg-gemma3-tools-4b", new ModelPricing(0.0, 0.0, true, 70)),
-            Map.entry("ollama/orieg-gemma3-tools-12b", new ModelPricing(0.0, 0.0, true, 40))
+            Map.entry("openai/gpt-4.1-nano", new ModelPricing(0.10, 0.40, true, 150))
     );
+
+    public static ModelPricing getPricing(String modelName) {
+        if (modelName.startsWith("ollama/")) {
+            return new ModelPricing(0.0, 0.0, true, 75);
+        }
+        return PRICING_MAP.get(modelName);
+    }
 
     public record ModelPricing(
             double inputPricePerMillion,

@@ -147,7 +147,7 @@ public class GroqTest {
         Map<String, TestResults> results = new HashMap<>();
 
         for (String model : TEST_MODELS) {
-            if (!LlmPricing.PRICING.containsKey(model)) {
+            if (LlmPricing.getPricing(model) == null) {
                 logger.warn("Skipping model {} - pricing not configured", model);
                 continue;
             }
@@ -243,7 +243,7 @@ public class GroqTest {
                 run.completionTokens = usage.getCompletionTokens() != null ? usage.getCompletionTokens() : 0;
 
                 // Calculate cost
-                var pricing = LlmPricing.PRICING.get(model);
+                var pricing = LlmPricing.getPricing(model);
                 run.cost = pricing.calculateCost(run.promptTokens, run.completionTokens);
             }
 
