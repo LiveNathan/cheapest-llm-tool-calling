@@ -55,7 +55,7 @@ public class LlmToolCallingBenchmarkTest {
 //                new GroqProxyProvider(),
 //                new DeepseekProxyProvider(),
 //                new DeepseekNativeProvider(),
-//                new GoogleNativeProvider(),
+                new GoogleNativeProvider(),
 //                new OpenAiNativeProvider(),
                 new OllamaTestContainerProvider()
         );

@@ -28,10 +28,6 @@ public class OllamaTestContainerProvider extends LlmProvider {
             "qwen3:1.7b",
             "qwen3:4b",
             "qwen3:8b",
-            "gemma3:270m",
-            "gemma3:1b",
-            "gemma3:4b",
-            "gemma3:12b",
             "llama3.2:1b",
             "llama3.2:3b",
             "llama3.1:8b"
