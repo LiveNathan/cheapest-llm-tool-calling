@@ -35,6 +35,7 @@ public class LlmToolCallingBenchmarkTest {
     private MockMixingConsoleService mockConsoleService;
     private MockWeatherService mockWeatherService;
     private BenchmarkRunner benchmarkRunner;
+    private static OllamaDirectProvider ollamaDirectProvider;
 
     static Stream<String> apiKeyProvider() {
         return Stream.of(
@@ -50,14 +51,15 @@ public class LlmToolCallingBenchmarkTest {
     void setUp() {
         mockConsoleService = new MockMixingConsoleService();
         mockWeatherService = new MockWeatherService();
-
+        ollamaDirectProvider = new OllamaDirectProvider();
         List<LlmProvider> providers = List.of(
 //                new GroqProxyProvider(),
 //                new DeepseekProxyProvider(),
 //                new DeepseekNativeProvider(),
 //                new GoogleNativeProvider(),
 //                new OpenAiNativeProvider(),
-                new OllamaTestContainerProvider()
+//                new OllamaTestContainerProvider(),
+                ollamaDirectProvider
         );
 
         benchmarkRunner = new BenchmarkRunner(providers, TEST_ITERATIONS, TIMEOUT_SECONDS);
@@ -66,6 +68,7 @@ public class LlmToolCallingBenchmarkTest {
     @AfterAll
     static void tearDown() {
         OllamaTestContainerProvider.cleanup();
+        ollamaDirectProvider.cleanup();
     }
 
     @ParameterizedTest
