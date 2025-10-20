@@ -30,7 +30,7 @@ public class LlmPricing {
     );
 
     public static ModelPricing getPricing(String modelName) {
-        if (modelName.startsWith("ollama/")) {
+        if (modelName.contains("ollama")) {
             return new ModelPricing(0.0, 0.0, true, 75);
         }
         return PRICING_MAP.get(modelName);
