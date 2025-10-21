@@ -28,9 +28,9 @@ public class OllamaDirectProvider extends LlmProvider {
             "qwen2.5:1.5b-instruct",
             "qwen3:0.6b",
             "qwen3:1.7b",
-            "qwen3:4b",
+//            "qwen3:4b",
             "qwen3:1.7b-q4_k_m",
-            "qwen3:8b",
+//            "qwen3:8b",
             "qwen2.5:3b-instruct",
             "llama3.2:1b",
             "llama3.2:1b-instruct-q8_0",
@@ -42,11 +42,7 @@ public class OllamaDirectProvider extends LlmProvider {
             "okamototk/gemma3-tools:1b",
             "okamototk/gemma3-tools:4b",
             "phi4-mini:3.8b",
-            "mistral:7b-instruct",
-            "hermes3:8b",
-            "nous-hermes2:10.7b-solar-q4_0",
-            "command-r:35b",         // Command-R model with tool support
-            "firefunction-v2:70b"    // Firefunction v2 - specialized for function calling
+            "hermes3:8b"
     );
 
     private final String baseUrl;
