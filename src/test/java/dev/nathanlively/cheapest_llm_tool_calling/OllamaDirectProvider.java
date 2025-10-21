@@ -24,25 +24,25 @@ public class OllamaDirectProvider extends LlmProvider {
     private static final String DEFAULT_BASE_URL = "http://localhost:11434";
 
     private static final List<String> TOOL_CALLING_MODELS = List.of(
-            "qwen2.5:0.5b",
-            "qwen2.5:1.5b-instruct",
-            "qwen3:0.6b",
-            "qwen3:1.7b",
-//            "qwen3:4b",
-            "qwen3:1.7b-q4_k_m",
-//            "qwen3:8b",
-            "qwen2.5:3b-instruct",
-            "llama3.2:1b",
-            "llama3.2:1b-instruct-q8_0",
-            "llama3.2:3b",
-            "llama3.2:3b-instruct-q4_0",
-            "llama3.1:8b",
-            "orieg/gemma3-tools:1b",
-            "orieg/gemma3-tools:4b",
-            "okamototk/gemma3-tools:1b",
-            "okamototk/gemma3-tools:4b",
-            "phi4-mini:3.8b",
-            "hermes3:8b"
+//            "qwen2.5:0.5b",
+//            "qwen2.5:1.5b-instruct",
+//            "qwen3:0.6b",
+//            "qwen3:1.7b",
+////            "qwen3:4b",
+//            "qwen3:1.7b-q4_k_m",
+////            "qwen3:8b",
+//            "qwen2.5:3b-instruct"
+//            "llama3.2:1b"
+//            "llama3.2:1b-instruct-q8_0"
+            "llama3.2:3b" // 59%
+//            "llama3.2:3b-instruct-q4_0",
+//            "llama3.1:8b"
+//            "orieg/gemma3-tools:1b",
+//            "orieg/gemma3-tools:4b",
+//            "okamototk/gemma3-tools:1b",
+//            "okamototk/gemma3-tools:4b",
+//            "phi4-mini:3.8b",
+//            "hermes3:8b"
     );
 
     private final String baseUrl;
@@ -53,7 +53,7 @@ public class OllamaDirectProvider extends LlmProvider {
     private OllamaModelManager modelManager;
 
     public OllamaDirectProvider() {
-        this(DEFAULT_BASE_URL, PullModelStrategy.WHEN_MISSING, true);
+        this(DEFAULT_BASE_URL, PullModelStrategy.WHEN_MISSING, false);
     }
 
     public OllamaDirectProvider(String baseUrl, PullModelStrategy pullStrategy) {
