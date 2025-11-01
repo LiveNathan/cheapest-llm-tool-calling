@@ -2,9 +2,9 @@ package dev.nathanlively.cheapest_llm_tool_calling;
 
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.stereotype.Service;
 
 import java.util.concurrent.atomic.AtomicInteger;
-
 public class MockWeatherService {
     private final AtomicInteger callCount = new AtomicInteger(0);
 
@@ -37,6 +37,10 @@ public class MockWeatherService {
 
     public int getTotalCallCount() {
         return callCount.get();
+    }
+
+    public void reset() {
+        callCount.set(0);
     }
 
     public enum Unit {
